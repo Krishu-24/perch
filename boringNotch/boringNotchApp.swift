@@ -201,6 +201,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Perch Helper runs the terminal and collects the Dev tab's data.
+        DevStore.shared.startHelper()
 
         NotificationCenter.default.addObserver(
             self,

@@ -59,11 +59,17 @@ struct ContentView: View {
         )
     }
 
-    /// Claude's activity takes the closed notch when a session needs you, and
-    /// while one works as long as no music is playing.
+    /// The closed notch shows Claude or what's playing, whichever you aren't looking at;
+    /// ClaudeLiveActivity.shouldShow has the rules.
     private var showClaudeActivity: Bool {
         claudeLiveActivity && vm.notchState == .closed && !vm.hideOnClosed && !coordinator.expandingView.show
-            && (claude.needsYouCount > 0 || (claude.workingCount > 0 && !musicManager.isPlaying))
+            && ClaudeLiveActivity.shouldShow(
+                needsYou: claude.needsYouCount,
+                working: claude.workingCount,
+                justFinished: claude.justFinishedCount,
+                isMediaActive: (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled,
+                frontmostAppID: claude.frontmostAppID,
+                mediaAppID: musicManager.bundleIdentifier)
     }
 
     private var computedChinWidth: CGFloat {
@@ -289,6 +295,7 @@ struct ContentView: View {
                           ClaudeLiveActivity(
                               needsYouCount: claude.needsYouCount,
                               workingCount: claude.workingCount,
+                              justFinishedCount: claude.justFinishedCount,
                               fiveHour: claude.usage?.fiveHour,
                               notchHeight: vm.effectiveClosedNotchHeight,
                               notchWidth: vm.closedNotchSize.width - cornerRadiusInsets.closed.top
@@ -356,6 +363,8 @@ struct ContentView: View {
                         NotchHomeView(albumArtNamespace: albumArtNamespace)
                     case .claude:
                         ClaudeView()
+                    case .dev:
+                        DevView()
                     }
                 }
                 .transition(

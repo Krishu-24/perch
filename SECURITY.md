@@ -43,6 +43,23 @@ claude plugin validate claude-mod/perch-bridge
 | **Library validation** | Turned off (`com.apple.security.cs.disable-library-validation`). Release builds are signed ad hoc, with no developer identity, so macOS can't confirm that the bundled frameworks (Sparkle, Lottie, MediaRemoteAdapter) come from the same developer as the app and would refuse to start it. The rest of the hardened runtime stays on. If you sign Perch with your own Apple Developer ID, you can delete this entitlement. |
 | **Inherited entitlements** | Camera (mirror), Calendars (calendar), Apple Events for Music and Spotify, network client and server. These come from Boring Notch and are used only by its Home-tab features. |
 
+### `Perch Helper.app`, the companion
+
+The one part of Perch **outside** the App Sandbox, because a terminal and tools like `git` can't work
+inside it. It ships inside `Perch.app/Contents/Library/LoginItems/`, starts with Perch and quits with it.
+Source: [`helper/`](helper/).
+
+| | |
+|---|---|
+| **Sandbox** | Off, by design. Hardened runtime on. Signed ad hoc. |
+| **Processes it starts** | Your login shell (only when you open the terminal); `git status`, `git log -1` and `git remote get-url` in up to 6 recent projects every 6 seconds; `lsof` for listening ports every 6 seconds; `gh auth status`, `gh api graphql` and `gh run list` every 3 minutes, only when `gh` is installed and signed in. Each runs with a time limit and with prompts turned off (`GIT_TERMINAL_PROMPT=0`, `GH_PROMPT_DISABLED=1`). |
+| **Network** | None of its own. `gh` talks to api.github.com with the token `gh` stores. |
+| **Credentials** | Never read. It doesn't open `gh`'s token, your Keychain or SSH keys. |
+| **Files it writes** | `dev.json` and `helper-state.json` in `~/Library/Application Support/Perch/`. |
+| **Files it reads** | The mod's `sessions/*.json`, to learn which folders you work in; the Git repositories in those folders. |
+| **Keyboard** | One global hot key, Control-`, through Carbon's `RegisterEventHotKey`. It needs no Accessibility permission and receives only that combination. |
+| **Links it accepts** | `perch-helper://terminal` (toggle), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
+
 ## Data at rest
 
 The mod writes plain JSON files that any process running as you can read:
@@ -50,6 +67,9 @@ The mod writes plain JSON files that any process running as you can read:
 - **`sessions/<id>.json`**: session ID, project folder path, the first 120 characters of your latest
   prompt, the current tool's name, a status word and a timestamp. Deleted after 24 hours.
 - **`limits.json`**: five-hour and weekly usage percentages and their reset times.
+- **`dev.json`**: your recent projects' paths and Git status, dev servers (port, process name, folder),
+  and the GitHub data shown on the Dev tab (login, contribution counts, pull request titles, run names).
+- **`helper-state.json`**: up to 12 recent project folders and when each was last seen.
 
 This is the same exposure as Claude Code's own history in `~/.claude`. If a prompt snippet on
 disk is a concern, delete `~/Library/Application Support/Perch` at any time, or remove the `prompt`

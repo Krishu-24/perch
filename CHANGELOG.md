@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.0 · 3 November 2026
+
+### Added
+
+- **Drop-down terminal.** Press Control-` anywhere and a terminal slides out of the notch. It keeps
+  running while hidden; clicking elsewhere or pressing Control-` again puts it away.
+- **Dev tab** with your GitHub contribution graph and streak, pull requests and reviews waiting on you,
+  GitHub Actions runs, running dev servers, and the Git status of your recent projects. Click a pull
+  request or run to open it, a dev server to open `localhost`, a project to open the terminal there.
+- **Perch Helper**, a small companion inside Perch.app that runs the terminal and gathers the Dev tab's
+  data, so Perch itself stays in the App Sandbox. GitHub data comes through the GitHub CLI (`gh`).
+- **The closed notch follows you.** It shows whatever you aren't looking at: Claude while you're in the
+  app that's playing (Prime in Safari, say), and what's playing while you're in Claude.
+- A green check on the closed notch for 5 minutes after a session finishes, until you open Claude.
+- `scripts/build-release.sh` builds Perch with the helper inside and zips it.
+- Tests for the helper's parsers and for the closed-notch rule.
+
+### Fixed
+
+- Settings → Claude no longer says *Connected* just because Perch's data folder exists.
+
 ## 1.0.0 · 3 November 2026
 
 The first release of Perch, built on Boring Notch 2.7.3.

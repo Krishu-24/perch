@@ -35,15 +35,18 @@ let hotUsage = ClaudeUsageSnapshot(
 /// The open notch at its real size (640 x 190): black, square top, rounded bottom,
 /// a stand-in for the tab bar, and the tab's content inset the way ContentView insets it.
 struct OpenNotchFrame<Content: View>: View {
+    var tab = "Claude"
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Label("Home", systemImage: "house.fill").foregroundStyle(.gray)
-                Label("Claude", systemImage: "sparkles")
-                    .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.12)))
+                ForEach([("Home", "house.fill"), ("Claude", "sparkles"), ("Dev", "chevron.left.forwardslash.chevron.right")], id: \.0) { name, icon in
+                    Label(name, systemImage: icon)
+                        .foregroundStyle(name == tab ? Color.white : Color.gray)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Capsule().fill(Color.white.opacity(name == tab ? 0.12 : 0)))
+                }
             }
             .font(.system(size: 12, weight: .medium))
             .foregroundStyle(.white)
@@ -84,6 +87,48 @@ func render<V: View>(_ name: String, _ view: V) throws {
     print("wrote \(url.path)")
 }
 
+func day(_ offset: Int) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    return formatter.string(from: now.addingTimeInterval(Double(offset) * 86400))
+}
+
+let sampleGitHub = GitHubSummary(
+    login: "Krishu-24", totalContributions: 412,
+    days: (0..<119).map { i in ContributionDay(date: day(i - 118), count: [0, 1, 3, 0, 5, 8, 2, 0, 4, 12, 6, 1, 0, 7][(i * 7 + i / 5) % 14]) },
+    pullRequests: [
+        PullRequest(repo: "Krishu-24/perch", number: 14, title: "Add the Dev tab and drop-down terminal", url: "", isDraft: false,
+                    checks: "SUCCESS", review: "APPROVED", updatedAt: now),
+        PullRequest(repo: "Krishu-24/site", number: 7, title: "Dark mode for the blog", url: "", isDraft: true,
+                    checks: "PENDING", review: nil, updatedAt: now),
+    ],
+    reviewRequests: [
+        PullRequest(repo: "friend/notes-app", number: 88, title: "Fix sync on slow networks", url: "", isDraft: false,
+                    checks: "FAILURE", review: "REVIEW_REQUIRED", updatedAt: now),
+    ],
+    runs: [
+        WorkflowRun(repo: "Krishu-24/perch", workflow: "CI", title: "Dev tab", branch: "main", status: "in_progress",
+                    conclusion: nil, url: "", createdAt: now.addingTimeInterval(-90)),
+        WorkflowRun(repo: "Krishu-24/site", workflow: "Deploy", title: "Dark mode", branch: "dark-mode", status: "completed",
+                    conclusion: "success", url: "", createdAt: now.addingTimeInterval(-25 * 60)),
+        WorkflowRun(repo: "Krishu-24/perch", workflow: "Release", title: "v1.0.0", branch: "main", status: "completed",
+                    conclusion: "failure", url: "", createdAt: now.addingTimeInterval(-3 * 3600)),
+    ])
+
+let sampleDev = DevSnapshot(
+    updatedAt: now,
+    projects: [
+        GitProject(path: "/Users/me/Code/perch", branch: "main", ahead: 2, changed: 4, untracked: 1, githubRepo: "Krishu-24/perch"),
+        GitProject(path: "/Users/me/Code/site", branch: "dark-mode", changed: 0, githubRepo: "Krishu-24/site"),
+        GitProject(path: "/Users/me/Code/api", branch: "main", behind: 3, changed: 0),
+    ],
+    servers: [
+        DevServer(port: 3000, command: "node", pid: 1, directory: "/Users/me/Code/site"),
+        DevServer(port: 8000, command: "python3", pid: 2, directory: "/Users/me/Code/api"),
+    ],
+    github: sampleGitHub, githubStatus: .ok)
+
 @MainActor
 func renderAll() throws {
     try FileManager.default.createDirectory(at: outputFolder, withIntermediateDirectories: true)
@@ -101,6 +146,17 @@ func renderAll() throws {
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 0, workingCount: 1, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 1, workingCount: 1, fiveHour: hotUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 3, workingCount: 0, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
+        ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 0, workingCount: 0, justFinishedCount: 1, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
+    })
+    try render("6-dev", OpenNotchFrame(tab: "Dev") {
+        DevTabContent(snapshot: sampleDev, isHelperRunning: true, isHelperInstalled: true, isScrollable: false)
+    })
+    try render("7-dev-signed-out", OpenNotchFrame(tab: "Dev") {
+        DevTabContent(snapshot: DevSnapshot(updatedAt: now, projects: sampleDev.projects, servers: [], github: nil, githubStatus: .signedOut),
+                      isHelperRunning: true, isHelperInstalled: true, isScrollable: false)
+    })
+    try render("8-dev-no-helper", OpenNotchFrame(tab: "Dev") {
+        DevTabContent(snapshot: nil, isHelperRunning: false, isHelperInstalled: true, isScrollable: false)
     })
     try render("4-near-limit", OpenNotchFrame {
         ClaudeTabContent(sessions: Array(busySessions.prefix(2)), usage: hotUsage, isConnected: true, onOpen: open, isScrollable: false)

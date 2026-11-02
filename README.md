@@ -4,14 +4,14 @@
 
 **Claude, perched in your MacBook's notch.**
 
-See what every Claude Code session is doing and how much of your plan you've used,
-without leaving what you're working on.
+Your Claude Code sessions and plan limits, a terminal that drops out of the notch,
+and your whole dev setup at a glance: pull requests, Actions, dev servers and Git.
 
-![Version](https://img.shields.io/badge/version-1.0.0-d97757)
+![Version](https://img.shields.io/badge/version-1.1.0-d97757)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-<img src="docs/images/claude-tab.png" alt="The Claude tab in the open notch: plan limits on the left, three sessions on the right" width="680">
+<img src="docs/images/claude-tab.png" alt="The Claude tab in the open notch: plan limits on the left, sessions on the right" width="680">
 
 </div>
 
@@ -34,53 +34,63 @@ without leaving what you're working on.
 
 ## What Perch does
 
-Perch is an independent notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch),
-with Claude added. It is not made by Anthropic or The Bored Team. Hover over the notch and you get two tabs: **Home** (music, calendar, battery,
-webcam mirror, all from Boring Notch) and **Claude**.
+Perch is an independent notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch).
+It is not made by Anthropic or The Bored Team. Hover over the notch and you get three tabs:
 
-| | Feature | What you see |
+- **Home**: music, calendar, battery and the webcam mirror, all from Boring Notch.
+- **Claude**: your Claude Code sessions and plan limits.
+- **Dev**: the terminal, GitHub, dev servers and your projects.
+
+| | Feature | What you get |
 |---|---|---|
-| 📊 | **Plan limits** | Your five-hour and weekly usage as bars that turn green → amber → red, with "Resets in 2h 13m". |
-| 🟠 | **Live sessions** | Every Claude Code session: *Working* (with the tool it's using), *Needs you*, or *Your turn*. |
-| ✋ | **Needs-you alerts** | When Claude is waiting for your approval, the closed notch shows a pulsing amber hand, even over music. |
-| ✻ | **Closed-notch status** | While Claude works, the closed notch shows Claude's spark and your five-hour usage. |
-| ↗️ | **Jump back** | Click a session to bring the Claude app or your terminal to the front. |
-| ⚙️ | **Settings page** | Turn the closed-notch status on or off, open the notch automatically when Claude needs you, and check the connection. |
+| 📊 | **Plan limits** | Five-hour and weekly usage as bars that go green → amber → red, with "Resets in 2h 13m". |
+| 🟠 | **Live sessions** | Every Claude Code session: *Working* (and the tool it's using), *Needs you*, or *Your turn*. |
+| ✻ | **A notch that follows you** | The closed notch shows whatever you're *not* looking at: Claude while you watch something, what's playing while you're in Claude. |
+| ✋ | **Needs-you alerts** | A pulsing amber hand on the closed notch when Claude is waiting for your approval. |
+| ⌨️ | **Drop-down terminal** | Press **Control-`** anywhere and a terminal slides out of the notch. Press it again and it's gone, still running. |
+| 🧑‍💻 | **Dev tab** | Your GitHub contribution graph, pull requests and reviews waiting on you, Actions runs, running dev servers, and the Git status of your recent projects. |
+| ↗️ | **One click away** | Click a session to jump to it, a pull request or run to open it, a dev server to open `localhost`, a project to open the terminal there. |
 
 It works with Claude Code in the **Claude desktop app's Code tab** and in **any terminal**.
 
 <p align="center">
-  <img src="docs/images/closed-notch.png" alt="The closed notch: Claude working with 18% used; a session needing you at 93% used; three sessions waiting" width="300">
+  <img src="docs/images/dev-tab.png" alt="The Dev tab: terminal button, contribution graph, pull requests and Actions runs" width="680">
   <br>
-  <sub>The closed notch while Claude works, when a session needs you, and when three are waiting.</sub>
+  <sub>The Dev tab. Scroll sideways for dev servers and projects.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/images/closed-notch.png" alt="The closed notch: Claude working; a session needing you; three waiting; a session just finished" width="300">
+  <br>
+  <sub>The closed notch: Claude working, a session needs you, three need you, and one just finished.</sub>
 </p>
 
 ---
 
 ## How it works
 
-Perch has two halves that talk through two small files on your Mac:
+Perch is three small pieces that talk through a few files on your Mac:
 
 ```
- Claude Code (desktop app or terminal)
-        │
-        │  perch-bridge mod  ── listens to session, turn, permission and usage events
-        ▼
- ~/Library/Application Support/Perch/
-        ├── sessions/<session id>.json   what each session is doing
-        └── limits.json                  five-hour and weekly usage
-        ▲
-        │  reads once a second
-        │
- Perch.app (the notch)
+ Claude Code ──── perch-bridge mod ────┐
+                                       ▼
+                        ~/Library/Application Support/Perch/
+                          sessions/<id>.json   limits.json   dev.json
+                                       ▲                        ▲
+ git · lsof · gh ──── Perch Helper ────┘────────────────────────┘
+                      └─ the drop-down terminal
+                                       │
+                                       ▼  reads the files
+                              Perch.app (the notch)
 ```
 
-1. **`perch-bridge`** is a Claude Code *mod*: a small plugin that runs inside Claude Code. When a
-   session starts, a turn starts or ends, a tool runs, a permission dialog appears or your usage
-   changes, it writes a few lines of JSON.
-2. **Perch.app** reads those files and draws them in the notch.
+| Piece | What it is | Why it's separate |
+|---|---|---|
+| **Perch.app** | The notch you see. | It runs in the macOS **App Sandbox**: it can read its own folder and nothing else. |
+| **perch-bridge** | A Claude Code *mod*, a small plugin that runs inside Claude Code. | Only Claude Code knows what a session is doing and how much of your plan is used. |
+| **Perch Helper** | A small companion app that ships inside Perch.app. | A terminal and tools like `git` can't work inside a sandbox, so this part runs outside it. |
 
-Nothing goes over the network, and the two halves never talk to each other directly.
+None of the pieces call each other. Each writes or reads plain files in one folder.
 
 ---
 
@@ -90,21 +100,25 @@ Nothing goes over the network, and the two halves never talk to each other direc
 
 - A Mac with **macOS 14 Sonoma or later** (Apple silicon or Intel). Made for MacBooks with a notch;
   on other screens it shows as a small bar at the top centre.
-- **Claude Code** 2.1.287 or later, or the **Claude desktop app** 2.1.286 or later (for its Code tab).
-- A Claude **Pro or Max** plan, if you want plan limits. Sessions show on any plan.
+- **Claude Code** 2.1.287 or later, or the **Claude desktop app** 2.1.286 or later.
+- A Claude **Pro or Max** plan for plan limits. Sessions show on any plan.
+- For the GitHub cards: the free [GitHub CLI](https://cli.github.com) (`brew install gh`).
 
 ### Step 1 · Install the app
 
-1. Download **`Perch-1.0.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+1. Download **`Perch-1.1.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
 2. Unzip it and drag **Perch.app** into **Applications**.
-3. Open it. macOS will say it *can't check Perch for malicious software*. This is because the
-   app isn't signed with a paid Apple Developer ID. To open it anyway:
+3. Open it. macOS will say it *can't check Perch for malicious software*, because the app isn't
+   signed with a paid Apple Developer ID. To open it anyway:
    - open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to Perch, **or**
    - run this once in Terminal:
      ```bash
      xattr -dr com.apple.quarantine /Applications/Perch.app
      ```
 4. Perch walks you through a short welcome. Hover over the notch to try it.
+
+Perch Helper comes inside Perch.app and starts with it. There's nothing else to install for the
+terminal or the Dev tab.
 
 > [!TIP]
 > Want it to start with your Mac? **Perch menu bar icon → Settings → General → Launch at login.**
@@ -128,12 +142,25 @@ enter `Krishu-24/perch`, then add **perch-bridge**.
 
 Answer `y` to add the marketplace and press Enter for the user scope.
 
-### Step 3 · Check it works
+### Step 3 · Connect GitHub (optional)
+
+For pull requests, Actions and your contribution graph, sign in to the GitHub CLI once. Press
+**Control-`** to drop the terminal down and run:
+
+```bash
+brew install gh     # if you don't have it yet
+gh auth login       # choose GitHub.com, then sign in with your browser
+```
+
+Perch never sees your GitHub token: it asks `gh` for data, and `gh` keeps the token in your Keychain.
+
+### Step 4 · Check it works
 
 1. Start a **new** Claude session (ones already open don't load the mod) and send any message.
-2. Hover over the notch and click **Claude**. Your session appears, and once Claude replies,
+2. Hover over the notch and click **Claude**: your session appears, and once Claude replies,
    your plan limits fill in.
-3. **Perch → Settings → Claude** should say **Connected**.
+3. Click **Dev**: your project shows up with its Git status, and GitHub fills in within a few minutes.
+4. Press **Control-`**: the terminal drops out of the notch.
 
 ---
 
@@ -147,27 +174,65 @@ Answer `y` to add the marketplace and press Enter for the user scope.
 |---|---|
 | **5-hour / Weekly bars** | How much of each plan window you've used. Green under 70%, amber under 90%, red from 90%. |
 | **Resets in …** | When that window starts over. |
-| **✋ amber row** | Claude is waiting for you to approve something. The tool's name is shown in amber. |
-| **✻ spinner** | Claude is working. The tool it's running is shown in grey. |
+| **✋ amber row** | Claude is waiting for you to approve something. The tool's name is in amber. |
+| **✻ spinner** | Claude is working. The tool it's running is in grey. |
 | **🟢 dot** | Claude finished and it's your turn. The time on the right is how long ago. |
 | **Click a row** | Brings the Claude app, or your terminal, to the front. |
 
 Sessions appear after their first message. Finished sessions drop off after 30 minutes of quiet,
-and a session that stops reporting (for example, after a crash) is hidden after 2 hours.
+and a session that stops reporting (after a crash, say) is hidden after 2 hours.
 
 ### The closed notch
 
-| What's showing | When |
+The closed notch shows **whatever you aren't looking at**: Claude or what's playing.
+
+| You're in… | Something playing? | Claude is… | The closed notch shows |
+|---|---|---|---|
+| The app that's playing (Prime in Safari, say) | Yes | working, finished or needs you | **Claude** |
+| Claude | Yes | working or finished | **What's playing** |
+| Anything else | Yes | working | **What's playing** |
+| Anything else | Yes | finished or needs you | **Claude** |
+| Anything | No | working, finished or needs you | **Claude** |
+
+| Mark | Meaning |
 |---|---|
-| **✻ spark** + your five-hour % | A session is working and no music is playing. |
-| **Pulsing ✋** + your five-hour % | A session needs you. Takes the notch even over music. |
+| **✻ turning spark** + five-hour % | A session is working. |
+| **Pulsing ✋** + five-hour % | A session needs you. |
 | **Pulsing ✋** + a number | That many sessions need you. |
+| **✓ green check** + five-hour % | A session finished in the last 5 minutes. It clears when you open Claude. |
+
+> [!NOTE]
+> When a video plays full screen, macOS hides the notch area entirely, so nothing shows there
+> until you leave full screen.
+
+### The drop-down terminal
+
+- **Control-`** anywhere shows it; **Control-`** again, or clicking anywhere else, hides it.
+- It's your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
+- Hiding doesn't stop anything: a running command keeps going, and you come back to the same place.
+- Typing `exit` closes it; the next Control-` starts a fresh shell.
+- Click a project in the Dev tab to open the terminal right in that folder.
+
+### The Dev tab
+
+<img src="docs/images/dev-signed-out.png" alt="The Dev tab before signing in to GitHub, with dev servers and projects" width="560">
+
+| Card | Shows | Click to |
+|---|---|---|
+| **Terminal** | — | Drop the terminal down. |
+| **Contributions** | Your GitHub contribution graph for the last 17 weeks, this year's total and your current streak. | — |
+| **Pull requests** | Reviews waiting on you (👁) first, then your open pull requests, with their checks as a dot: green passed, red failed, amber running. | Open it on GitHub. |
+| **Actions** | The latest workflow runs in your projects: ✓ passed, ✕ failed, ⟳ running. | Open the run. |
+| **Dev servers** | Anything you started that listens on a local port (`npm run dev`, `python -m http.server` …), with its port and folder. | Open `http://localhost:<port>`. |
+| **Projects** | The Git repositories you've worked in with Claude recently: branch, changed and new files, commits ahead ↑ and behind ↓. Amber dot means uncommitted changes. | Open the terminal there. |
+
+The row scrolls sideways. Local cards refresh every 6 seconds; GitHub every 3 minutes.
 
 ### Settings → Claude
 
 | Setting | Default | What it does |
 |---|---|---|
-| Show Claude activity on the closed notch | On | The spark and hand described above. |
+| Show Claude activity on the closed notch | On | The spark, hand and check described above. |
 | Open the notch when Claude needs you | Off | Pops the notch open on the Claude tab the moment a session starts waiting. |
 | Status / Active sessions / Limits updated | — | Whether the mod has connected, and how fresh the data is. |
 | Show Data Folder in Finder | — | Opens `~/Library/Application Support/Perch`. |
@@ -186,40 +251,58 @@ Perch was built to be safe to run all day next to your code. The full threat mod
   Plan limits come from the same numbers Claude Code already shows in `/usage`.
 - **Reads exactly one environment variable,** `HOME`, to find your Library folder.
 - **Writes only inside** `~/Library/Application Support/Perch/`.
-- **Can't approve or block anything.** It only listens. Every hook passes the event on
-  unchanged, and if the mod itself fails, Claude Code carries on as if it weren't there.
-- **Small and checkable.** About 120 lines of TypeScript in
+- **Can't approve or block anything.** It only listens. Every hook passes the event on unchanged,
+  and if the mod itself fails, Claude Code carries on as if it weren't there.
+- **Small and checkable:** about 115 lines in
   [`claude-mod/perch-bridge/hooks/register.ts`](claude-mod/perch-bridge/hooks/register.ts).
   `claude plugin validate claude-mod/perch-bridge` lists every event it hooks and every call it makes.
 
 ### 🛡️ The app (`Perch.app`)
 
 - **Runs in the macOS App Sandbox** with the hardened runtime. Its one file exception is
-  read/write access to `~/Library/Application Support/Perch/`, so it can read the mod's files
-  and delete old ones. It can't open the rest of your files.
+  read/write access to `~/Library/Application Support/Perch/`. It can't open the rest of your files,
+  and it never runs `git`, `gh` or a shell itself.
 - **One hardened-runtime check is relaxed:** library validation. The release is signed without a
   developer identity, so macOS can't match the bundled frameworks to the app and would refuse to
-  launch it otherwise. [SECURITY.md](SECURITY.md) explains this and how to remove it if you sign
-  with your own Apple Developer ID.
-- **No telemetry, no analytics, no accounts.** This was checked in Boring Notch's source and binary
-  before building on it.
-- **Automatic updates are switched off.** The Boring Notch update feed is removed, so nothing can
-  replace Perch behind your back. You update by downloading a new release.
-- **Network use is all inherited from Boring Notch**, and none of it involves Claude:
-  - **Album art:** fetched from wherever your music player says it is.
-  - **Music animation:** one small animation file from LottieFiles.
-  - **Lyrics:** looked up on lrclib.net, *only* if you turn lyrics on (off by default).
-  - **YouTube Music:** talks to `localhost` only.
+  launch it otherwise. [SECURITY.md](SECURITY.md) explains this and how to remove it.
+- **No telemetry, no analytics, no accounts.**
+- **Automatic updates are switched off,** so nothing can replace Perch behind your back.
+- **Network use is all inherited from Boring Notch's music features:** album art, one animation file,
+  lyrics *only if you turn lyrics on*, and `localhost` for YouTube Music.
+
+### 🧰 The helper (`Perch Helper.app`)
+
+The helper is the one piece **outside** the sandbox, because a terminal has to be able to see your files.
+Here is everything it does:
+
+| It runs | For | How often |
+|---|---|---|
+| Your login shell | The drop-down terminal | When you open it |
+| `git status`, `git log -1`, `git remote get-url` | Projects card | Every 6 s, in up to 6 recent projects |
+| `lsof` (listening ports and their folders) | Dev servers card | Every 6 s |
+| `gh auth status`, `gh api graphql`, `gh run list` | GitHub cards | Every 3 min, only if `gh` is installed and signed in |
+
+- **It doesn't make network requests itself.** Only `gh` talks to GitHub, with the token `gh` keeps.
+- **It writes only** `dev.json` and `helper-state.json` (your recent project folders) in Perch's folder.
+- **It reads** the mod's session files, just to learn which folders you work in.
+- **Its links are locked down.** Perch talks to it through `perch-helper://` links. The only one that
+  takes input, *open the terminal in a folder*, is refused unless that folder is already one of the
+  projects on the Dev tab, so a web page or another app can't use it to run anything.
+- **The global shortcut (Control-`) needs no special permission.** It uses macOS's hot key API, not
+  Accessibility, and it sees only that one key combination.
+- It quits when Perch quits.
 
 ### 📄 What's stored, and for how long
 
 | File | Contents | Kept |
 |---|---|---|
-| `sessions/<id>.json` | Session ID, project folder path, first 120 characters of your latest prompt, current tool name, status, time. | Deleted after 24 hours. |
-| `limits.json` | Five-hour and weekly usage percentages and reset times. | Overwritten as it changes. |
+| `sessions/<id>.json` | Session ID, project folder, first 120 characters of your latest prompt, tool name, status, time. | Deleted after 24 hours. |
+| `limits.json` | Five-hour and weekly usage and reset times. | Overwritten as it changes. |
+| `dev.json` | Your recent projects' Git status, dev servers, and the GitHub data on the Dev tab. | Overwritten every few seconds. |
+| `helper-state.json` | Up to 12 recent project folders, so they survive a restart. | Folders that no longer exist are dropped. |
 
-These are plain text files, readable by any app running as you, just like Claude Code's own
-history in `~/.claude`. Delete the folder at any time; it's recreated on the next event.
+These are plain text files, readable by any app running as you, just like Claude Code's own history
+in `~/.claude`. Delete the folder at any time; it's recreated as needed.
 
 ### 🔑 macOS permissions
 
@@ -232,43 +315,52 @@ Perch only asks when you use the feature that needs it:
 | Automation (Music, Spotify) | Music controls. |
 | Accessibility | Replacing the volume and brightness pop-ups. |
 
-The Claude features need **no** macOS permissions.
+The Claude features, the Dev tab and the terminal need **no** macOS permissions.
 
 ### ⚠️ Know before you install
 
-- The release isn't **notarized** by Apple, so macOS can't vouch for it. That's why the first
-  launch needs *Open Anyway*. If you'd rather not trust a downloaded build, [build it yourself](#build-from-source).
-  It takes about two minutes.
+- The release isn't **notarized** by Apple, so macOS can't vouch for it. That's why the first launch
+  needs *Open Anyway*. If you'd rather not trust a downloaded build, [build it yourself](#build-from-source).
 - Install the mod only from **this** repository (`Krishu-24/perch`), never from a copy.
 
 ---
 
 ## Customize it
 
-Everything Claude-related lives in two places, so it's easy to make your own.
-
 ### Project layout
 
 ```
 perch/
 ├── boringNotch/
-│   ├── Claude/                       ← everything Perch adds to the app
-│   │   ├── ClaudeView.swift          the Claude tab: limits panel and session rows
-│   │   ├── ClaudeLiveActivity.swift  what the closed notch shows
-│   │   ├── ClaudeSettings.swift      Settings → Claude
-│   │   ├── ClaudeSessionStore.swift  reads the mod's files, filters and sorts sessions
-│   │   ├── ClaudeUsage.swift         parses limits.json
-│   │   ├── ClaudeFormatting.swift    "Resets in 2h 13m", "4m ago"
+│   ├── Claude/                        ← the Claude tab and closed-notch status
+│   │   ├── ClaudeView.swift           the tab: limits panel and session rows
+│   │   ├── ClaudeLiveActivity.swift   the closed notch, and the rule for when it shows Claude
+│   │   ├── ClaudeSettings.swift       Settings → Claude
+│   │   ├── ClaudeSessionStore.swift   reads the mod's files; tracks the app you're in
+│   │   ├── ClaudeUsage.swift          parses limits.json
+│   │   ├── ClaudeFormatting.swift     "Resets in 2h 13m", "4m ago"
 │   │   └── StatusIcons.swift, ProcessingSpinner.swift, TerminalColors.swift
-│   └── …                             Boring Notch (Home tab, music, HUDs, settings)
-├── claude-mod/perch-bridge/          the Claude Code mod
-│   ├── hooks/register.ts             what it listens to and writes
-│   └── hooks/register.test.ts        its tests
-├── .claude-plugin/marketplace.json   lets Claude Code install the mod from this repo
+│   ├── Dev/                           ← the Dev tab
+│   │   ├── DevView.swift              the cards
+│   │   ├── DevStore.swift             reads dev.json, starts the helper, opens links
+│   │   └── DevSnapshot.swift          the dev.json format, shared with the helper
+│   └── …                              Boring Notch (Home tab, music, HUDs, settings)
+├── helper/                            ← Perch Helper, a Swift package
+│   ├── Sources/PerchHelper/
+│   │   ├── TerminalPanel.swift        the drop-down terminal
+│   │   ├── Collector.swift            gathers Git, dev servers and GitHub data
+│   │   ├── HotKey.swift               Control-`
+│   │   ├── Shell.swift                runs git, lsof and gh safely
+│   │   └── main.swift                 the app and its perch-helper:// links
+│   ├── Sources/PerchDevCore/          parsing, kept free of AppKit so it's easy to test
+│   └── Tests/                         unit tests for the parsing
+├── claude-mod/perch-bridge/           the Claude Code mod
+├── .claude-plugin/marketplace.json    lets Claude Code install the mod from this repo
 ├── scripts/
-│   ├── claude-tests/run.sh           run every test
-│   └── claude-tab-snapshots/render.sh  render the Claude UI to PNGs
-└── docs/images/                      the screenshots in this README
+│   ├── build-release.sh               build Perch with the helper inside, and zip it
+│   ├── claude-tests/run.sh            run every test
+│   └── claude-tab-snapshots/render.sh render the Claude and Dev tabs to PNGs
+└── docs/images/                       the screenshots in this README
 ```
 
 ### Common changes
@@ -276,19 +368,23 @@ perch/
 | You want to… | Change |
 |---|---|
 | Change the colours | `TerminalColors` in `boringNotch/Claude/TerminalColors.swift`. |
+| Use a different terminal shortcut | `HotKey(keyCode:modifiers:)` in `helper/Sources/PerchHelper/main.swift`. |
+| Make the terminal bigger or smaller | `maxSize` in `helper/Sources/PerchHelper/TerminalPanel.swift`. |
+| Keep the terminal open when you click elsewhere | Remove `windowDidResignKey` in `TerminalPanel.swift`. |
+| Refresh GitHub more or less often | `githubInterval` in `helper/Sources/PerchHelper/Collector.swift`. |
+| Show more projects | `projectLimit` in `Collector.swift`. |
+| Change when the closed notch shows Claude | `ClaudeLiveActivity.shouldShow` in `ClaudeLiveActivity.swift`. |
+| Add a card to the Dev tab | Add a `DevCard` in `DevView.swift`, and the data it needs to `DevSnapshot.swift` and `Collector.swift`. |
 | Move the green/amber/red thresholds | `ClaudeLimitBar.tint(for:)` in `ClaudeView.swift`. |
-| Keep finished sessions longer | `quietTimeout` in `ClaudeSessionStore.swift`. |
-| Show something else on the closed notch | `ClaudeLiveActivity.swift`. |
-| Send more (or less) from Claude Code | `register.ts`. The fields you add show up in `ClaudeSession` once you add them there. |
-| Rename the tab or its icon | `tabs` in `boringNotch/components/Tabs/TabSelectionView.swift`. |
+| Send more (or less) from Claude Code | `register.ts`; add the new fields to `ClaudeSession` too. |
 
 ### Check your changes
 
 ```bash
-# Logic tests (time strings, limits parsing, session filtering) and the mod's tests
+# Every test: Claude and Dev logic, the helper's parsers, and the mod
 scripts/claude-tests/run.sh
 
-# Render the Claude tab and closed notch with sample data → build/claude-snapshots/*.png
+# Render the Claude and Dev tabs and the closed notch with sample data → build/claude-snapshots/*.png
 scripts/claude-tab-snapshots/render.sh
 ```
 
@@ -319,14 +415,16 @@ You need **Xcode 26** or later.
 ```bash
 git clone https://github.com/Krishu-24/perch.git
 cd perch
-xcodebuild -project boringNotch.xcodeproj -scheme boringNotch -configuration Release \
-  -derivedDataPath build/DerivedData \
-  CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual build
+scripts/build-release.sh
 open build/DerivedData/Build/Products/Release/Perch.app
 ```
 
-`CODE_SIGN_IDENTITY=-` signs it for your Mac only, so you don't need an Apple Developer account.
-Or open `boringNotch.xcodeproj` in Xcode, choose **Sign to Run Locally**, and press ⌘R.
+The script builds Perch and Perch Helper, puts the helper inside Perch.app, signs both for your Mac
+only (no Apple Developer account needed) and zips the result into `build/release/`.
+
+To work in Xcode instead, open `boringNotch.xcodeproj`, choose **Sign to Run Locally**, and press ⌘R.
+Build the helper with `helper/build.sh` and copy `Perch Helper.app` into Applications so the Dev tab
+can find it.
 
 ---
 
@@ -343,22 +441,43 @@ open when you installed it don't load it.
 <details>
 <summary><b>Sessions show, but the plan limits are empty</b></summary>
 
-Limits arrive with Claude's first reply in a session, and only on a Pro or Max plan. API-key
-and other non-subscription setups have no plan limits to show.
+Limits arrive with Claude's first reply in a session, and only on a Pro or Max plan.
+</details>
+
+<details>
+<summary><b>Control-` does nothing, or VS Code's terminal stopped toggling</b></summary>
+
+Only one app can own a global shortcut. If another app took Control-` first, Perch's doesn't work;
+if Perch has it, apps like VS Code no longer get it. Change it in `helper/Sources/PerchHelper/main.swift`
+(see [Common changes](#common-changes)), or use the **Terminal** button on the Dev tab.
+</details>
+
+<details>
+<summary><b>The Dev tab says Perch Helper isn't running</b></summary>
+
+Click **Start Perch Helper**. If it keeps stopping, make sure you're running the Perch.app from the
+release (it contains the helper), and that only one copy of Perch is installed.
+</details>
+
+<details>
+<summary><b>The GitHub cards ask me to sign in</b></summary>
+
+Run `gh auth login` in the drop-down terminal, then open the Dev tab again: while GitHub isn't
+connected, opening the tab checks straight away. Otherwise it checks every 3 minutes.
+</details>
+
+<details>
+<summary><b>A dev server I started doesn't show</b></summary>
+
+Perch lists programs that listen on a port below 49152 and run from a folder in your home folder.
+Something started from `/` or from inside an app, or on a random high port, is skipped on purpose.
 </details>
 
 <details>
 <summary><b>A session still says "Needs you" after I approved</b></summary>
 
-The status changes back to *Working* when the approved tool finishes. A long-running command
-keeps the hand up until it's done.
-</details>
-
-<details>
-<summary><b>The notch shows nothing, or two things overlap</b></summary>
-
-Another notch app is running. Quit it (Boring Notch, NotchNook, Vibe Notch, Open Island…) and
-reopen Perch.
+The status changes back to *Working* when the approved tool finishes, so a long command keeps the hand up
+until it's done.
 </details>
 
 <details>
@@ -371,11 +490,12 @@ See [Step 1](#step-1--install-the-app). Use *Open Anyway* or the `xattr` command
 
 ## Uninstall
 
-1. Quit Perch (menu bar icon → Quit) and delete **Perch.app** from Applications.
-2. Remove the mod: in a terminal, `claude plugin uninstall perch-bridge@perch`. In the desktop
-   app, use **+ → Plugins**.
+1. Quit Perch (menu bar icon → Quit); the helper quits with it. Delete **Perch.app** from Applications.
+2. Remove the mod: in a terminal, `claude plugin uninstall perch-bridge@perch`. In the desktop app,
+   use **+ → Plugins**.
 3. Delete its data: `rm -r ~/Library/Application\ Support/Perch`.
 4. Optional, to remove its settings: `rm -r ~/Library/Containers/io.github.krishu-24.perch`.
+5. Optional, to sign the GitHub CLI out: `gh auth logout`.
 
 ---
 
@@ -386,6 +506,7 @@ Perch stands on other people's open-source work:
 | Project | License | What Perch uses |
 |---|---|---|
 | [Boring Notch](https://github.com/TheBoredTeam/boring.notch) | GPL-3.0 | The whole notch app Perch is built on. |
+| [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) | MIT | The terminal inside Perch Helper. |
 | [Vibe Notch](https://github.com/farouqaldori/vibe-notch) | Apache-2.0 | Status icons, spinner, colours and the session row layout. |
 | [Open Island](https://github.com/Octane0411/open-vibe-island) | GPL-3.0 | The usage-limits parser. |
 | [CapaTheNotch](https://github.com/maximfakel/capa-the-notch) | MIT | Its research showed how to read limits outside the terminal. |

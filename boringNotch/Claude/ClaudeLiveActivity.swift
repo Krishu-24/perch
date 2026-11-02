@@ -2,9 +2,10 @@
 //  ClaudeLiveActivity.swift
 //  boringNotch
 //
-//  What the closed notch shows while Claude works: the spinner, or an amber
-//  hand when a session needs you, on the left; the five-hour usage, or how many
-//  sessions are waiting, on the right. Laid out like MusicLiveActivity.
+//  What the closed notch shows for Claude: the spark while a session works, an
+//  amber hand when one needs you, or a green check when one just finished, on
+//  the left; the five-hour usage, or how many sessions are waiting, on the right.
+//  Laid out like MusicLiveActivity.
 //
 
 import SwiftUI
@@ -12,6 +13,7 @@ import SwiftUI
 struct ClaudeLiveActivity: View {
     let needsYouCount: Int
     let workingCount: Int
+    var justFinishedCount = 0
     let fiveHour: ClaudeUsageWindow?
     /// The closed notch's height; each side gets a square this tall, less 12.
     let notchHeight: CGFloat
@@ -42,8 +44,12 @@ struct ClaudeLiveActivity: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(TerminalColors.amber)
                 .modifier(ClaudePulse())
-        } else {
+        } else if workingCount > 0 {
             ClaudeSpark()
+        } else if justFinishedCount > 0 {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(TerminalColors.green)
         }
     }
 
@@ -64,6 +70,24 @@ struct ClaudeLiveActivity: View {
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(.white.opacity(0.6))
         }
+    }
+}
+
+extension ClaudeLiveActivity {
+    /// Whether the closed notch shows Claude instead of what's playing. The idea: show
+    /// what you aren't looking at.
+    /// - A session that needs you always wins, unless you're already in Claude and something's playing.
+    /// - With nothing playing, any Claude activity shows.
+    /// - In the app that's playing (Prime in Safari, say), Claude shows; in Claude, the media does.
+    /// - Anywhere else, a finished session shows, but plain working leaves the media in place.
+    static func shouldShow(needsYou: Int, working: Int, justFinished: Int, isMediaActive: Bool,
+                           frontmostAppID: String?, mediaAppID: String?) -> Bool {
+        guard needsYou > 0 || working > 0 || justFinished > 0 else { return false }
+        guard isMediaActive else { return true }
+        if frontmostAppID == ClaudeSessionStore.claudeAppID { return false }
+        if needsYou > 0 { return true }
+        if let mediaAppID, frontmostAppID == mediaAppID { return true }
+        return justFinished > 0
     }
 }
 

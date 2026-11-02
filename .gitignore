@@ -53,3 +53,7 @@ build/
 *.xcarchive
 *.dSYM
 
+
+# Perch Helper (Swift package build output)
+helper/.build/
+helper/.swiftpm/

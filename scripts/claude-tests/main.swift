@@ -106,5 +106,35 @@ section("readSessions") {
           "a missing folder reads as no sessions")
 }
 
+section("closed notch: Claude or what's playing") {
+    let claude = ClaudeSessionStore.claudeAppID
+    let safari = "com.apple.Safari"
+    func show(needsYou: Int = 0, working: Int = 0, finished: Int = 0, media: Bool, in app: String?) -> Bool {
+        ClaudeLiveActivity.shouldShow(needsYou: needsYou, working: working, justFinished: finished,
+                                      isMediaActive: media, frontmostAppID: app, mediaAppID: media ? safari : nil)
+    }
+    check(show(working: 1, media: true, in: safari), true, "watching Prime in Safari while Claude works: show Claude")
+    check(show(working: 1, media: true, in: claude), false, "in Claude while Prime plays: show Prime")
+    check(show(finished: 1, media: true, in: safari), true, "Claude finished while you watch: show the check")
+    check(show(working: 1, media: true, in: "com.microsoft.VSCode"), false, "elsewhere, plain working leaves the media")
+    check(show(finished: 1, media: true, in: "com.microsoft.VSCode"), true, "elsewhere, a finished session shows")
+    check(show(needsYou: 1, media: true, in: "com.microsoft.VSCode"), true, "needs you wins over media")
+    check(show(needsYou: 1, media: true, in: claude), false, "unless you're already in Claude")
+    check(show(working: 1, media: false, in: claude), true, "nothing playing: Claude shows anywhere")
+    check(show(media: true, in: safari), false, "no Claude activity: nothing to show")
+}
+
+section("justFinished") {
+    func session(_ id: String, _ status: String, finishedAgo: TimeInterval) throws -> ClaudeSession {
+        let json = #"{"sessionId":"\#(id)","cwd":"/x","status":"\#(status)","prompt":"p","updatedAt":\#((now.timeIntervalSince1970 - finishedAgo) * 1000)}"#
+        return try JSONDecoder().decode(ClaudeSession.self, from: Data(json.utf8))
+    }
+    let sessions = [try session("a", "done", finishedAgo: 60), try session("b", "done", finishedAgo: 10 * 60),
+                    try session("c", "working", finishedAgo: 30), try session("d", "done", finishedAgo: 200)]
+    check(ClaudeSessionStore.justFinished(sessions, since: .distantPast, now: now), 2, "done within the last five minutes")
+    check(ClaudeSessionStore.justFinished(sessions, since: now.addingTimeInterval(-120), now: now), 1,
+          "ones that finished before you last opened Claude are seen")
+}
+
 print(failures == 0 ? "PASS: \(checks) checks" : "\(failures) of \(checks) checks failed")
 exit(failures == 0 ? 0 : 1)

@@ -68,6 +68,12 @@ final class ClaudeSessionStore: ObservableObject {
     @Published private(set) var usage: ClaudeUsageSnapshot?
     /// False until the mod has written anything, so the tab can explain the setup.
     @Published private(set) var isConnected = false
+    /// Sessions that finished in the last few minutes, since you last opened Claude.
+    @Published private(set) var justFinishedCount = 0
+    /// The app you're using, so the closed notch can show what you're not looking at.
+    @Published private(set) var frontmostAppID: String? = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+
+    nonisolated static let claudeAppID = "com.anthropic.claudefordesktop"
 
     /// The sandbox points NSHomeDirectory at the app's container, so read the real one.
     static let folder: URL = {
@@ -86,13 +92,26 @@ final class ClaudeSessionStore: ObservableObject {
     /// Files of sessions that ended or went quiet are deleted after this long.
     nonisolated private static let cleanupAge: TimeInterval = 24 * 60 * 60
 
+    /// How long a finished session counts as "your turn" on the closed notch.
+    nonisolated static let justFinishedWindow: TimeInterval = 5 * 60
+
     private var timer: Timer?
+    private var activationObserver: NSObjectProtocol?
+    /// When you last switched to the Claude app; sessions that finished before then are seen.
+    private var lastSawClaude = Date.distantPast
 
     var needsYouCount: Int { sessions.filter { $0.status == .needsYou }.count }
     var workingCount: Int { sessions.filter { $0.status == .working }.count }
 
     private init() {
+        if frontmostAppID == Self.claudeAppID { lastSawClaude = Date() }
         reload()
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let id = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+            Task { @MainActor in self?.appDidActivate(id) }
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.reload() }
         }
@@ -105,14 +124,33 @@ final class ClaudeSessionStore: ObservableObject {
         let limits = ClaudeUsageLoader.load(from: Self.limitsFile)
         if limits != usage { usage = limits }
 
-        let connected = FileManager.default.fileExists(atPath: Self.folder.path)
+        // Perch Helper writes to this folder too, so look for the mod's own files.
+        let fm = FileManager.default
+        let connected = fm.fileExists(atPath: Self.sessionsFolder.path) || fm.fileExists(atPath: Self.limitsFile.path)
         if connected != isConnected { isConnected = connected }
+
+        let finished = Self.justFinished(sessions, since: lastSawClaude)
+        if finished != justFinishedCount { justFinishedCount = finished }
+    }
+
+    private func appDidActivate(_ id: String?) {
+        frontmostAppID = id
+        if id == Self.claudeAppID {
+            lastSawClaude = Date()
+            reload()
+        }
+    }
+
+    /// Sessions that finished within `justFinishedWindow` and after you last looked at Claude.
+    nonisolated static func justFinished(_ sessions: [ClaudeSession], since lastSeen: Date, now: Date = Date()) -> Int {
+        let cutoff = max(now.addingTimeInterval(-justFinishedWindow), lastSeen)
+        return sessions.filter { $0.status == .done && $0.updated > cutoff }.count
     }
 
     /// Brings the app the session runs in to the front: the Claude app for a
     /// desktop session, otherwise the frontmost terminal Claude Code was started from.
     func open(_ session: ClaudeSession) {
-        let claudeApp = "com.anthropic.claudefordesktop"
+        let claudeApp = Self.claudeAppID
         if session.surface == "desktop" || session.surface == nil,
            let app = NSRunningApplication.runningApplications(withBundleIdentifier: claudeApp).first {
             app.activate()
