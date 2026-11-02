@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 const HOME = '/Users/test'
-const FOLDER = `${HOME}/Library/Application Support/BoringNotchClaude`
+const FOLDER = `${HOME}/Library/Application Support/Perch`
 const SESSION_FILE = `${FOLDER}/sessions/s1.json`
 
 type Write = { path: string; text: string }

@@ -53,7 +53,7 @@ struct ClaudeSettings: View {
             } header: {
                 Text("Claude Code")
             } footer: {
-                Text("Claude Code sends session status and plan limits through the notch-bridge mod, which writes small files to this folder on your Mac. Nothing is sent over the network. To install the mod, run `claude plugin marketplace add ./claude-mod`, then `claude plugin install notch-bridge@boring-notch-claude`, from this project's folder.")
+                Text("Claude Code sends session status and plan limits through the perch-bridge mod, which writes small files to this folder on your Mac. Nothing is sent over the network. To install the mod, run `claude plugin marketplace add .`, then `claude plugin install perch-bridge@perch`, from this project's folder.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

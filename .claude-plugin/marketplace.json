@@ -1,0 +1,6 @@
+{
+  "name": "perch",
+  "description": "The Claude Code side of Perch, a macOS notch app for Claude.",
+  "owner": { "name": "Krishu-24" },
+  "plugins": [{ "name": "perch-bridge", "source": "./claude-mod/perch-bridge" }]
+}

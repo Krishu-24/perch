@@ -2,9 +2,9 @@
 //  ClaudeSessionStore.swift
 //  boringNotch
 //
-//  Reads what the notch-bridge Claude Code mod writes:
-//    ~/Library/Application Support/BoringNotchClaude/sessions/<id>.json
-//    ~/Library/Application Support/BoringNotchClaude/limits.json
+//  Reads what the perch-bridge Claude Code mod writes:
+//    ~/Library/Application Support/Perch/sessions/<id>.json
+//    ~/Library/Application Support/Perch/limits.json
 //
 
 import AppKit
@@ -73,7 +73,7 @@ final class ClaudeSessionStore: ObservableObject {
     static let folder: URL = {
         let home = getpwuid(getuid()).flatMap { String(validatingCString: $0.pointee.pw_dir) } ?? NSHomeDirectory()
         return URL(fileURLWithPath: home)
-            .appendingPathComponent("Library/Application Support/BoringNotchClaude", isDirectory: true)
+            .appendingPathComponent("Library/Application Support/Perch", isDirectory: true)
     }()
 
     private static let sessionsFolder = folder.appendingPathComponent("sessions", isDirectory: true)

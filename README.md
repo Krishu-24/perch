@@ -1,191 +1,399 @@
-<h1 align="center">
-  <br>
-  <a href="http://thebored.name"><img src="https://framerusercontent.com/images/RFK4vs0kn8pRMuOO58JeyoemXA.png?scale-down-to=256" alt="Boring Notch" width="150"></a>
-  <br>
-  Boring Notch
-  <br>
-</h1>
+<div align="center">
 
+# Perch
+
+**Claude, perched in your MacBook's notch.**
+
+See what every Claude Code session is doing and how much of your plan you've used,
+without leaving what you're working on.
+
+![Version](https://img.shields.io/badge/version-1.0.0-d97757)
+![macOS](https://img.shields.io/badge/macOS-14%2B-black)
+![License](https://img.shields.io/badge/license-GPL--3.0-blue)
+
+<img src="docs/images/claude-tab.png" alt="The Claude tab in the open notch: plan limits on the left, three sessions on the right" width="680">
+
+</div>
+
+---
+
+## Contents
+
+- [What Perch does](#what-perch-does)
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Using Perch](#using-perch)
+- [Security and privacy](#security-and-privacy)
+- [Customize it](#customize-it)
+- [Build from source](#build-from-source)
+- [Troubleshooting](#troubleshooting)
+- [Uninstall](#uninstall)
+- [Credits and license](#credits-and-license)
+
+---
+
+## What Perch does
+
+Perch is a notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch),
+with Claude added. Hover over the notch and you get two tabs: **Home** (music, calendar, battery,
+webcam mirror, all from Boring Notch) and **Claude**.
+
+| | Feature | What you see |
+|---|---|---|
+| 📊 | **Plan limits** | Your five-hour and weekly usage as bars that turn green → amber → red, with "Resets in 2h 13m". |
+| 🟠 | **Live sessions** | Every Claude Code session: *Working* (with the tool it's using), *Needs you*, or *Your turn*. |
+| ✋ | **Needs-you alerts** | When Claude is waiting for your approval, the closed notch shows a pulsing amber hand, even over music. |
+| ✻ | **Closed-notch status** | While Claude works, the closed notch shows Claude's spark and your five-hour usage. |
+| ↗️ | **Jump back** | Click a session to bring the Claude app or your terminal to the front. |
+| ⚙️ | **Settings page** | Turn the closed-notch status on or off, open the notch automatically when Claude needs you, and check the connection. |
+
+It works with Claude Code in the **Claude desktop app's Code tab** and in **any terminal**.
 
 <p align="center">
-  <a title="Crowdin" target="_blank" href="https://crowdin.com/project/boring-notch"><img src="https://badges.crowdin.net/boring-notch/localized.svg"></a>
-  <img src="https://github.com/TheBoredTeam/boring.notch/actions/workflows/cicd.yml/badge.svg" alt="TheBoringNotch Build & Test" style="margin-right: 10px;" />
-  <a href="https://discord.gg/c8JXA7qrPm">
-    <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/c8JXA7qrPm?style=flat" alt="Discord Badge" />
-  </a>
-  <a href="ttps://ko-fi.com/brandonhimpfen">
-    <img src="https://srv-cdn.himpfen.io/badges/kofi/kofi-flat.svg" alt="Ko-Fi" />
-  </a>
+  <img src="docs/images/closed-notch.png" alt="The closed notch: Claude working with 18% used; a session needing you at 93% used; three sessions waiting" width="300">
+  <br>
+  <sub>The closed notch while Claude works, when a session needs you, and when three are waiting.</sub>
 </p>
 
-<!--Welcome to **Boring.Notch**, the coolest way to make your MacBook's notch the star of the show! Forget about those boring status bars—our notch turns into a dynamic music control center, complete with a snazzy visualizer and all the music controls you need. It's like having a mini concert right at the top of your screen! -->
-
-Say hello to **Boring Notch**, the coolest way to make your MacBook’s notch the star of the show! Say goodbye to boring status bars: with Boring Notch, your notch transforms into a dynamic music control center, complete with a vibrant visualizer and all the essential music controls you need. But that’s just the start! Boring Notch also offers calendar integration, a handy file shelf with AirDrop support, a complete MacOS HUD replacement and more!
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/2d5f69c1-6e7b-4bc2-a6f1-bb9e27cf88a8" alt="Demo GIF" />
-</p>
-
-<!--https://github.com/user-attachments/assets/19b87973-4b3a-4853-b532-7e82d1d6b040-->
----
-<!--## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Roadmap](#-roadmap)
-- [Building from Source](#building-from-source)
-- [Contributing](#-contributing)
-- [Join our Discord Server](#join-our-discord-server)
-- [Star History](#star-history)
-- [Buy us a coffee!](#buy-us-a-coffee)
-- [Acknowledgments](#-acknowledgments)-->
-
-## Installation
-
-**System Requirements:**  
-- macOS **14 Sonoma** or later  
-- Apple Silicon or Intel Mac
-
----
-> [!IMPORTANT]
-> We don't have an Apple Developer account yet. The application will show a popup on first launch that the app is from an unidentified developer.
-> 1. Click **OK** to close the popup.
-> 2. Open **System Settings** > **Privacy & Security**.
-> 3. Scroll down and click **Open Anyway** next to the warning about the app.
-> 4. Confirm your choice if prompted.
->
-> You only need to do this once.
-
-
-### Option 1: Download and Install Manually
-<a href="https://github.com/TheBoredTeam/boring.notch/releases/latest/download/boringNotch.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
-
 ---
 
-### Option 2: Install via Homebrew
+## How it works
 
-You can also install the app using [Homebrew](https://brew.sh):
+Perch has two halves that talk through two small files on your Mac:
 
-```bash
-brew install --cask TheBoredTeam/boring-notch/boring-notch --no-quarantine
+```
+ Claude Code (desktop app or terminal)
+        │
+        │  perch-bridge mod  ── listens to session, turn, permission and usage events
+        ▼
+ ~/Library/Application Support/Perch/
+        ├── sessions/<session id>.json   what each session is doing
+        └── limits.json                  five-hour and weekly usage
+        ▲
+        │  reads once a second
+        │
+ Perch.app (the notch)
 ```
 
-## Usage
+1. **`perch-bridge`** is a Claude Code *mod*: a small plugin that runs inside Claude Code. When a
+   session starts, a turn starts or ends, a tool runs, a permission dialog appears or your usage
+   changes, it writes a few lines of JSON.
+2. **Perch.app** reads those files and draws them in the notch.
 
-- Launch the app, and voilà—your notch is now the coolest part of your screen.
-- Hover over the notch to see it expand and reveal all its secrets.
-- Use the controls to manage your music like a rockstar.
-- Click the star in your menu bar to customize your notch to your heart's content.
+Nothing goes over the network, and the two halves never talk to each other directly.
 
-## 📋 Roadmap
-- [x] Playback live activity 🎧
-- [x] Calendar integration 📆
-- [x] Reminders integration ☑️
-- [x] Mirror 📷
-- [x] Charging indicator and current percentage 🔋
-- [x] Customizable gesture control 👆🏻
-- [x] Shelf functionality with AirDrop 📚
-- [x] Notch sizing customization, finetuning on different display sizes 🖥️
-- [x] System HUD replacements (volume, brightness, backlight) 🎚️💡⌨️
-- [ ] Bluetooth Live Activity (connect/disconnect for bluetooth devices) 
-- [ ] Weather integration ⛅️
-- [ ] Customizable Layout options 🛠️
-- [ ] Lock Screen Widgets 🔒
-- [ ] Extension system 🧩
-- [ ] Notifications (under consideration) 🔔
-<!-- - [ ] Clipboard history manager 📌 `Extension` -->
-<!-- - [ ] Download indicator of different browsers (Safari, Chromium browsers, Firefox) 🌍 `Extension`-->
-<!-- - [ ] Customizable function buttons 🎛️ -->
-<!-- - [ ] App switcher 🪄 -->
+---
 
-<!-- ## 🧩 Extensions
-> [!NOTE]
-> We’re hard at work on some awesome extensions! Stay tuned, and we’ll keep you updated as soon as they’re released. -->
+## Install
 
-## Building from Source
+### What you need
 
-### Prerequisites
+- A Mac with **macOS 14 Sonoma or later** (Apple silicon or Intel). Made for MacBooks with a notch;
+  on other screens it shows as a small bar at the top centre.
+- **Claude Code** 2.1.287 or later, or the **Claude desktop app** 2.1.286 or later (for its Code tab).
+- A Claude **Pro or Max** plan, if you want plan limits. Sessions show on any plan.
 
-- **macOS 14 or later**: If you’re not on the latest macOS, we might need to send a search party.
-- **Xcode 16 or later**: This is where the magic happens, so make sure it’s up-to-date.
+### Step 1 · Install the app
 
-### Installation
+1. Download **`Perch-1.0.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+2. Unzip it and drag **Perch.app** into **Applications**.
+3. Open it. macOS will say it *can't check Perch for malicious software*. This is because the
+   app isn't signed with a paid Apple Developer ID. To open it anyway:
+   - open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to Perch, **or**
+   - run this once in Terminal:
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/Perch.app
+     ```
+4. Perch walks you through a short welcome. Hover over the notch to try it.
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/TheBoredTeam/boring.notch.git
-   cd boring.notch
-   ```
+> [!TIP]
+> Want it to start with your Mac? **Perch menu bar icon → Settings → General → Launch at login.**
 
-2. **Open the Project in Xcode**:
-   ```bash
-   open boringNotch.xcodeproj
-   ```
+> [!IMPORTANT]
+> Only one notch app can use the notch at a time. Quit Boring Notch, NotchNook, Vibe Notch,
+> Open Island and the like before you open Perch.
 
-3. **Build and Run**:
-    - Click the "Run" button or press `Cmd + R`. Watch the magic unfold!
+### Step 2 · Connect Claude Code
 
-## 🤝 Contributing
+Install the `perch-bridge` mod once. Every Claude session you start afterwards uses it.
 
-We’re all about good vibes and awesome contributions! Here’s how you can join the fun:
+**In the Claude desktop app:** click **+** next to the prompt box → **Plugins** → **Add marketplace**,
+enter `Krishu-24/perch`, then add **perch-bridge**.
 
-1. **Fork the Repo**: Click that shiny "Fork" button and make your own version.
-2. **Clone Your Fork**:
-   ```bash
-   git clone https://github.com/{your-name}/boring.notch.git
-   # Replace {your-name} with your GitHub username
-   ```
-3. **Make sure to use the `dev` branch as base.**
-4. **Create a New Branch**:
-   ```bash
-   git checkout -b feature/{your-feature-name}
-   # Replace {your-feature-name} with a descriptive and concise name for your branch
-   # It is best practice to use only alphanumeric characters, write words in lowercase
-   # and seperate words with a single hyphen
-   ```
-5. **Make Your Changes**: Add that feature or fix that bug.
-6. **Commit Your Changes**:
-   ```bash
-   git commit -m "insert descriptive message here"
-   ```
-7. **Push to Your Fork**:
-   ```bash
-   git push origin feature/{your-feature-name}
-   # Remember to replace {your-feature-name} with the name you chose
-   ```
-8. **Create a Pull Request**: Head to the original repository and click on "New Pull Request." Fill in the required details, **make sure the base branch is set to `dev`**, and submit your PR. Let’s see what you’ve got!
+**Or in a terminal**, at the `claude` prompt:
 
-## Join our Discord Server
+```
+/plugin install perch-bridge --marketplace Krishu-24/perch
+```
 
-<a href="https://discord.gg/GvYcYpAKTu" target="_blank"><img src="https://iili.io/28m3GHv.png" alt="Join The Boring Server!" style="height: 60px !important;width: 217px !important;" ></a>
+Answer `y` to add the marketplace and press Enter for the user scope.
 
-## Star History
+### Step 3 · Check it works
 
-<a href="https://www.star-history.com/#TheBoredTeam/boring.notch&Timeline">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
- </picture>
-</a>
+1. Start a **new** Claude session (ones already open don't load the mod) and send any message.
+2. Hover over the notch and click **Claude**. Your session appears, and once Claude replies,
+   your plan limits fill in.
+3. **Perch → Settings → Claude** should say **Connected**.
 
-## Support us on Ko-fi!
-<!-- <a href="https://www.buymeacoffee.com/jfxh67wvfxq" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-red.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a> -->
-<a href="https://www.ko-fi.com/alexander5015" target="_blank"><img src="https://github.com/user-attachments/assets//a76175ef-7e93-475a-8b67-4922ba5964c2" alt="Support us on Ko-fi" style="height: 70px !important;width: 346px !important;" ></a>
+---
 
-## 🎉 Acknowledgments
+## Using Perch
 
-We would like to express our gratitude to the authors and maintainers of the open-source projects that made this possible. 
+### The Claude tab
 
-## Notable Projects
-- **[MediaRemoteAdapter](https://github.com/ungive/mediaremote-adapter)** –  An open-source project that allowed us to use the Now Playing source in macOS 15.4+
-- **[NotchDrop](https://github.com/Lakr233/NotchDrop)** – An open-source project that has been instrumental in developing the first version of the "Shelf" feature in Boring Notch.
+<img src="docs/images/near-limit.png" alt="The Claude tab close to the five-hour limit: a red 93% bar" width="560">
 
-For a full list of licenses and attributions, please see the [Third-Party Licenses](./THIRD_PARTY_LICENSES.md) file.
+| Part | Meaning |
+|---|---|
+| **5-hour / Weekly bars** | How much of each plan window you've used. Green under 70%, amber under 90%, red from 90%. |
+| **Resets in …** | When that window starts over. |
+| **✋ amber row** | Claude is waiting for you to approve something. The tool's name is shown in amber. |
+| **✻ spinner** | Claude is working. The tool it's running is shown in grey. |
+| **🟢 dot** | Claude finished and it's your turn. The time on the right is how long ago. |
+| **Click a row** | Brings the Claude app, or your terminal, to the front. |
 
-### Icon credits: [@maxtron95](https://github.com/maxtron95)
-### Website credits: [@himanshhhhuv](https://github.com/himanshhhhuv)
+Sessions appear after their first message. Finished sessions drop off after 30 minutes of quiet,
+and a session that stops reporting (for example, after a crash) is hidden after 2 hours.
 
-- **SwiftUI**: For making us look like coding wizards.
-- **You**: For being awesome and checking out **boring.notch**!
+### The closed notch
 
+| What's showing | When |
+|---|---|
+| **✻ spark** + your five-hour % | A session is working and no music is playing. |
+| **Pulsing ✋** + your five-hour % | A session needs you. Takes the notch even over music. |
+| **Pulsing ✋** + a number | That many sessions need you. |
 
+### Settings → Claude
+
+| Setting | Default | What it does |
+|---|---|---|
+| Show Claude activity on the closed notch | On | The spark and hand described above. |
+| Open the notch when Claude needs you | Off | Pops the notch open on the Claude tab the moment a session starts waiting. |
+| Status / Active sessions / Limits updated | — | Whether the mod has connected, and how fresh the data is. |
+| Show Data Folder in Finder | — | Opens `~/Library/Application Support/Perch`. |
+
+---
+
+## Security and privacy
+
+Perch was built to be safe to run all day next to your code. The full threat model is in
+[SECURITY.md](SECURITY.md). In short:
+
+### 🔒 The mod (`perch-bridge`)
+
+- **Never touches the network.** It makes no requests of any kind.
+- **Never sees your login.** It doesn't read your Claude token, Keychain, cookies or settings files.
+  Plan limits come from the same numbers Claude Code already shows in `/usage`.
+- **Reads exactly one environment variable,** `HOME`, to find your Library folder.
+- **Writes only inside** `~/Library/Application Support/Perch/`.
+- **Can't approve or block anything.** It only listens. Every hook passes the event on
+  unchanged, and if the mod itself fails, Claude Code carries on as if it weren't there.
+- **Small and checkable.** About 120 lines of TypeScript in
+  [`claude-mod/perch-bridge/hooks/register.ts`](claude-mod/perch-bridge/hooks/register.ts).
+  `claude plugin validate claude-mod/perch-bridge` lists every event it hooks and every call it makes.
+
+### 🛡️ The app (`Perch.app`)
+
+- **Runs in the macOS App Sandbox** with the hardened runtime. Its one file exception is
+  read/write access to `~/Library/Application Support/Perch/`, so it can read the mod's files
+  and delete old ones. It can't open the rest of your files.
+- **No telemetry, no analytics, no accounts.** This was checked in Boring Notch's source and binary
+  before building on it.
+- **Automatic updates are switched off.** The Boring Notch update feed is removed, so nothing can
+  replace Perch behind your back. You update by downloading a new release.
+- **Network use is all inherited from Boring Notch**, and none of it involves Claude:
+  - **Album art:** fetched from wherever your music player says it is.
+  - **Music animation:** one small animation file from LottieFiles.
+  - **Lyrics:** looked up on lrclib.net, *only* if you turn lyrics on (off by default).
+  - **YouTube Music:** talks to `localhost` only.
+
+### 📄 What's stored, and for how long
+
+| File | Contents | Kept |
+|---|---|---|
+| `sessions/<id>.json` | Session ID, project folder path, first 120 characters of your latest prompt, current tool name, status, time. | Deleted after 24 hours. |
+| `limits.json` | Five-hour and weekly usage percentages and reset times. | Overwritten as it changes. |
+
+These are plain text files, readable by any app running as you, just like Claude Code's own
+history in `~/.claude`. Delete the folder at any time; it's recreated on the next event.
+
+### 🔑 macOS permissions
+
+Perch only asks when you use the feature that needs it:
+
+| Permission | Used for |
+|---|---|
+| Calendars and Reminders | The calendar on the Home tab. |
+| Camera | The mirror on the Home tab. |
+| Automation (Music, Spotify) | Music controls. |
+| Accessibility | Replacing the volume and brightness pop-ups. |
+
+The Claude features need **no** macOS permissions.
+
+### ⚠️ Know before you install
+
+- The release isn't **notarized** by Apple, so macOS can't vouch for it. That's why the first
+  launch needs *Open Anyway*. If you'd rather not trust a downloaded build, [build it yourself](#build-from-source).
+  It takes about two minutes.
+- Install the mod only from **this** repository (`Krishu-24/perch`), never from a copy.
+
+---
+
+## Customize it
+
+Everything Claude-related lives in two places, so it's easy to make your own.
+
+### Project layout
+
+```
+perch/
+├── boringNotch/
+│   ├── Claude/                       ← everything Perch adds to the app
+│   │   ├── ClaudeView.swift          the Claude tab: limits panel and session rows
+│   │   ├── ClaudeLiveActivity.swift  what the closed notch shows
+│   │   ├── ClaudeSettings.swift      Settings → Claude
+│   │   ├── ClaudeSessionStore.swift  reads the mod's files, filters and sorts sessions
+│   │   ├── ClaudeUsage.swift         parses limits.json
+│   │   ├── ClaudeFormatting.swift    "Resets in 2h 13m", "4m ago"
+│   │   └── StatusIcons.swift, ProcessingSpinner.swift, TerminalColors.swift
+│   └── …                             Boring Notch (Home tab, music, HUDs, settings)
+├── claude-mod/perch-bridge/          the Claude Code mod
+│   ├── hooks/register.ts             what it listens to and writes
+│   └── hooks/register.test.ts        its tests
+├── .claude-plugin/marketplace.json   lets Claude Code install the mod from this repo
+├── scripts/
+│   ├── claude-tests/run.sh           run every test
+│   └── claude-tab-snapshots/render.sh  render the Claude UI to PNGs
+└── docs/images/                      the screenshots in this README
+```
+
+### Common changes
+
+| You want to… | Change |
+|---|---|
+| Change the colours | `TerminalColors` in `boringNotch/Claude/TerminalColors.swift`. |
+| Move the green/amber/red thresholds | `ClaudeLimitBar.tint(for:)` in `ClaudeView.swift`. |
+| Keep finished sessions longer | `quietTimeout` in `ClaudeSessionStore.swift`. |
+| Show something else on the closed notch | `ClaudeLiveActivity.swift`. |
+| Send more (or less) from Claude Code | `register.ts`. The fields you add show up in `ClaudeSession` once you add them there. |
+| Rename the tab or its icon | `tabs` in `boringNotch/components/Tabs/TabSelectionView.swift`. |
+
+### Check your changes
+
+```bash
+# Logic tests (time strings, limits parsing, session filtering) and the mod's tests
+scripts/claude-tests/run.sh
+
+# Render the Claude tab and closed notch with sample data → build/claude-snapshots/*.png
+scripts/claude-tab-snapshots/render.sh
+```
+
+The mod's tests need the Claude Code CLI. If `claude` isn't on your PATH, point `CLAUDE_CLI` at it:
+
+```bash
+CLAUDE_CLI="$HOME/Library/Application Support/Claude/claude-code/<version>/<build>/claude.app/Contents/MacOS/claude" scripts/claude-tests/run.sh
+```
+
+### Working on the mod
+
+Install it from your own checkout so edits take effect without publishing anything:
+
+```bash
+claude plugin marketplace add /path/to/perch
+claude plugin install perch-bridge@perch
+```
+
+Claude Code then reads the mod straight from your folder. After an edit, run `/reload-plugins`
+in a session, or start a new one.
+
+---
+
+## Build from source
+
+You need **Xcode 26** or later.
+
+```bash
+git clone https://github.com/Krishu-24/perch.git
+cd perch
+xcodebuild -project boringNotch.xcodeproj -scheme boringNotch -configuration Release \
+  -derivedDataPath build/DerivedData \
+  CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= CODE_SIGN_STYLE=Manual build
+open build/DerivedData/Build/Products/Release/Perch.app
+```
+
+`CODE_SIGN_IDENTITY=-` signs it for your Mac only, so you don't need an Apple Developer account.
+Or open `boringNotch.xcodeproj` in Xcode, choose **Sign to Run Locally**, and press ⌘R.
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>The Claude tab says "Claude isn't connected yet"</b></summary>
+
+The mod hasn't written anything yet. Check that `perch-bridge` is installed (in a terminal:
+`claude plugin list`), then start a **new** session and send a message. Sessions that were already
+open when you installed it don't load it.
+</details>
+
+<details>
+<summary><b>Sessions show, but the plan limits are empty</b></summary>
+
+Limits arrive with Claude's first reply in a session, and only on a Pro or Max plan. API-key
+and other non-subscription setups have no plan limits to show.
+</details>
+
+<details>
+<summary><b>A session still says "Needs you" after I approved</b></summary>
+
+The status changes back to *Working* when the approved tool finishes. A long-running command
+keeps the hand up until it's done.
+</details>
+
+<details>
+<summary><b>The notch shows nothing, or two things overlap</b></summary>
+
+Another notch app is running. Quit it (Boring Notch, NotchNook, Vibe Notch, Open Island…) and
+reopen Perch.
+</details>
+
+<details>
+<summary><b>macOS won't open the app</b></summary>
+
+See [Step 1](#step-1--install-the-app). Use *Open Anyway* or the `xattr` command once.
+</details>
+
+---
+
+## Uninstall
+
+1. Quit Perch (menu bar icon → Quit) and delete **Perch.app** from Applications.
+2. Remove the mod: in a terminal, `claude plugin uninstall perch-bridge@perch`. In the desktop
+   app, use **+ → Plugins**.
+3. Delete its data: `rm -r ~/Library/Application\ Support/Perch`.
+4. Optional, to remove its settings: `rm -r ~/Library/Containers/io.github.krishu-24.perch`.
+
+---
+
+## Credits and license
+
+Perch stands on other people's open-source work:
+
+| Project | License | What Perch uses |
+|---|---|---|
+| [Boring Notch](https://github.com/TheBoredTeam/boring.notch) | GPL-3.0 | The whole notch app Perch is built on. |
+| [Vibe Notch](https://github.com/farouqaldori/vibe-notch) | Apache-2.0 | Status icons, spinner, colours and the session row layout. |
+| [Open Island](https://github.com/Octane0411/open-vibe-island) | GPL-3.0 | The usage-limits parser. |
+| [CapaTheNotch](https://github.com/maximfakel/capa-the-notch) | MIT | Its research showed how to read limits outside the terminal. |
+
+Every copied file says where it came from. Third-party notices are in
+[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
+
+**Perch is licensed under the [GNU General Public License v3.0](LICENSE)**, the same as Boring Notch.
+In plain words:
+
+- ✅ Use it, study it, change it, and share it, for free, for any purpose.
+- ✅ Share your own modified version with anyone.
+- 📌 If you share a version, share its source code under GPL-3.0 too, and keep the credits.
+
+See [CHANGELOG.md](CHANGELOG.md) for what's new.

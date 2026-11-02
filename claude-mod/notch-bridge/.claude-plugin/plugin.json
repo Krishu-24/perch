@@ -1,1 +1,0 @@
-{ "name": "notch-bridge", "version": "0.1.0", "description": "Reports session status and plan-limit usage to the Boring Notch Claude tab, via local files only." }

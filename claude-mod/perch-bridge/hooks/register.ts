@@ -20,7 +20,7 @@ type SessionFile = {
 
 type Windows = Record<string, { used_percentage: number; resets_at?: string }>
 
-const DIR = 'Library/Application Support/BoringNotchClaude'
+const DIR = 'Library/Application Support/Perch'
 
 let base: string | undefined
 let current: SessionFile | undefined

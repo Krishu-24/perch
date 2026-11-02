@@ -1,0 +1,6 @@
+{
+  "name": "perch-bridge",
+  "version": "1.0.0",
+  "description": "Tells the Perch notch app what each Claude Code session is doing and how much of your plan limits is used. Writes small files to ~/Library/Application Support/Perch and nothing else.",
+  "license": "GPL-3.0-only"
+}

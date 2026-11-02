@@ -1,6 +1,6 @@
 // Ported from Open Island (github.com/Octane0411/open-vibe-island),
 // Sources/OpenIslandCore/ClaudeUsage.swift, licensed under GPL-3.0.
-// Changed: reads the notch-bridge mod's limits.json instead of the status-line
+// Changed: reads the perch-bridge mod's limits.json instead of the status-line
 // cache, and dropped the public API and the multi-file fallback.
 
 import Foundation

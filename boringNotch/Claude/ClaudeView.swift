@@ -47,7 +47,7 @@ struct ClaudeTabContent: View {
         if !isConnected {
             ClaudeEmptyState(
                 title: "Claude isn't connected yet",
-                detail: "Install the notch-bridge mod in Claude Code. The README in this project has the two steps."
+                detail: "Install the perch-bridge mod in Claude Code. The README has the steps."
             )
         } else if sessions.isEmpty {
             ClaudeEmptyState(
