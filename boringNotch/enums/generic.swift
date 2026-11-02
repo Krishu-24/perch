@@ -26,6 +26,7 @@ public enum NotchState {
 
 public enum NotchViews {
     case home
+    case limits
     case claude
     case dev
 }

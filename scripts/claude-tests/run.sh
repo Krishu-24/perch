@@ -5,8 +5,8 @@ set -e
 cd "$(dirname "$0")/../.."
 mkdir -p build
 bin="build/claude-tests-bin"
-# ClaudeSettings.swift needs the Defaults package, so it is left out.
-sources=$(ls boringNotch/Claude/*.swift boringNotch/Dev/*.swift | grep -v ClaudeSettings.swift)
+# The settings pages need the app (the Defaults package, its accent colour), so they are left out.
+sources=$(ls boringNotch/Claude/*.swift boringNotch/Dev/*.swift | grep -vE "(Claude|Dev)Settings.swift")
 swiftc -o "$bin" $sources scripts/claude-tests/main.swift
 "$bin"
 

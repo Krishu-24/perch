@@ -121,6 +121,67 @@ public enum ListeningPortsParser {
     }
 }
 
+public enum CodexUsageParser {
+    /// The newest rate-limit reading in the text of a Codex session file (`rollout-*.jsonl`),
+    /// which records one with every reply: `primary` is the five-hour window, `secondary` the week.
+    public static func latest(in text: String) -> CodexLimits? {
+        for line in text.split(separator: "\n").reversed() where line.contains("\"rate_limits\"") {
+            guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                  object["type"] as? String == "event_msg",
+                  let payload = object["payload"] as? [String: Any],
+                  payload["type"] as? String == "token_count",
+                  let limits = payload["rate_limits"] as? [String: Any] else { continue }
+
+            var fiveHour: UsageWindow?
+            var week: UsageWindow?
+            for key in ["primary", "secondary"] {
+                guard let window = limits[key] as? [String: Any],
+                      let used = (window["used_percent"] as? NSNumber)?.doubleValue else { continue }
+                let resets = (window["resets_at"] as? NSNumber).map { Date(timeIntervalSince1970: $0.doubleValue) }
+                let minutes = (window["window_minutes"] as? NSNumber)?.intValue ?? (key == "primary" ? 300 : 10080)
+                let usage = UsageWindow(usedPercent: used, resetsAt: resets)
+                if minutes <= 24 * 60 { fiveHour = usage } else { week = usage }
+            }
+            guard fiveHour != nil || week != nil else { continue }
+
+            let stamp = (object["timestamp"] as? String).flatMap { iso.date(from: $0) ?? isoBasic.date(from: $0) }
+            return CodexLimits(plan: limits["plan_type"] as? String, fiveHour: fiveHour, week: week,
+                               capturedAt: stamp ?? Date())
+        }
+        return nil
+    }
+
+    private static let iso: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let isoBasic = ISO8601DateFormatter()
+}
+
+public enum ProcessSummary {
+    /// Shortens a command line to what you'd recognise: the tool and its arguments, without
+    /// paths or the interpreter. `node …/node_modules/.bin/next dev` → `next dev`.
+    public static func summarize(_ arguments: String) -> String {
+        let interpreters: Set<String> = ["node", "python", "python3", "ruby", "bun", "deno", "php", "java", "npx", "env"]
+        var words = arguments.split(separator: " ").map(String.init)
+        // Drop interpreters (python3.12 included) and their flags, such as `-m`.
+        while let first = words.first {
+            let name = URL(fileURLWithPath: first).lastPathComponent
+            guard interpreters.contains(name)
+                    || name.range(of: #"^python3\.\d+$"#, options: .regularExpression) != nil
+                    || first.hasPrefix("-") else { break }
+            words.removeFirst()
+        }
+        let shortened = words.prefix(3).map { word in
+            word.contains("/") ? URL(fileURLWithPath: word).lastPathComponent : word
+        }
+        let summary = shortened.joined(separator: " ")
+        return summary.isEmpty ? URL(fileURLWithPath: arguments.split(separator: " ").first.map(String.init) ?? "").lastPathComponent : summary
+    }
+}
+
 public enum GitHubParser {
     /// The GraphQL query Perch Helper sends through `gh api graphql`.
     public static let viewerQuery = """
@@ -148,8 +209,8 @@ public enum GitHubParser {
     }
     """
 
-    /// How many days of the contribution calendar to keep: 17 weeks.
-    public static let calendarDays = 119
+    /// How many days of the contribution calendar to keep: a year, as GitHub shows it.
+    public static let calendarDays = 371
 
     private struct Response: Decodable {
         struct Data: Decodable {

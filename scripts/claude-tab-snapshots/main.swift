@@ -40,11 +40,13 @@ struct OpenNotchFrame<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                ForEach([("Home", "house.fill"), ("Claude", "sparkles"), ("Dev", "chevron.left.forwardslash.chevron.right")], id: \.0) { name, icon in
-                    Label(name, systemImage: icon)
+            // The tab bar as Perch draws it: icons only.
+            HStack(spacing: 0) {
+                ForEach([("Home", "house.fill"), ("Terminal", "apple.terminal.fill"), ("Limits", "gauge.with.dots.needle.33percent"),
+                         ("Claude", "sparkles"), ("Dev", "chart.bar.xaxis")], id: \.0) { name, icon in
+                    Image(systemName: icon)
                         .foregroundStyle(name == tab ? Color.white : Color.gray)
-                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .padding(.horizontal, 15).frame(height: 26)
                         .background(Capsule().fill(Color.white.opacity(name == tab ? 0.12 : 0)))
                 }
             }
@@ -147,6 +149,16 @@ func renderAll() throws {
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 1, workingCount: 1, fiveHour: hotUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 3, workingCount: 0, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 0, workingCount: 0, justFinishedCount: 1, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
+    })
+    try render("9-limits", OpenNotchFrame(tab: "Limits") {
+        LimitsContent(
+            claude: ClaudeUsageSnapshot(fiveHour: ClaudeUsageWindow(usedPercentage: 18, resetsAt: now.addingTimeInterval(80 * 60)),
+                                        sevenDay: ClaudeUsageWindow(usedPercentage: 29, resetsAt: now.addingTimeInterval(4 * 86400)),
+                                        cachedAt: now.addingTimeInterval(-120)),
+            codex: CodexLimits(plan: "plus", fiveHour: UsageWindow(usedPercent: 9, resetsAt: now.addingTimeInterval(190 * 60)),
+                               week: UsageWindow(usedPercent: 1, resetsAt: now.addingTimeInterval(5 * 86400)),
+                               capturedAt: now.addingTimeInterval(-25 * 60)),
+            isClaudeConnected: true)
     })
     try render("6-dev", OpenNotchFrame(tab: "Dev") {
         DevTabContent(snapshot: sampleDev, isHelperRunning: true, isHelperInstalled: true)

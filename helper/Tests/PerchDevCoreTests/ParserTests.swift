@@ -134,7 +134,7 @@ final class GitHubParserTests: XCTestCase {
         let summary = try GitHubParser.parseViewer(Data(json.utf8))
         XCTAssertEqual(summary.login, "Krishu-24")
         XCTAssertEqual(summary.totalContributions, 321)
-        XCTAssertEqual(summary.days.count, GitHubParser.calendarDays, "keeps the last 17 weeks")
+        XCTAssertEqual(summary.days.count, 140, "keeps up to a year; this calendar is 20 weeks")
         XCTAssertEqual(summary.days.last?.count, 139 % 4)
         XCTAssertEqual(summary.pullRequests.map(\.id), ["Krishu-24/perch#12", "Krishu-24/site#3"])
         XCTAssertEqual(summary.pullRequests[0].checks, "SUCCESS")

@@ -14,12 +14,14 @@
 
 import AppKit
 import Carbon.HIToolbox
+import PerchDevCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let perchBundleID = "io.github.krishu-24.perch"
 
     private let terminal = TerminalController()
     private let collector = Collector()
+    private let widgets = DesktopWidgets()
     private var hotKey: HotKey?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -41,6 +43,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKey = HotKey(keyCode: kVK_ANSI_Grave, modifiers: controlKey) { [weak self] in
             DispatchQueue.main.async { self?.terminal.toggle() }
         }
+        // The desktop widgets: data from the collector, Claude from the mod's files,
+        // and whether to show them (and where) from the settings Perch writes.
+        widgets.model.open = { NSWorkspace.shared.open($0) }
+        widgets.model.openTerminal = { [weak self] project in self?.terminal.show(in: project.path) }
+        collector.onUpdate = { [weak self] snapshot in self?.widgets.model.snapshot = snapshot }
+        refreshWidgets()
+        Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.refreshWidgets() }
         collector.start()
 
         // Quit along with Perch. Perch has no Dock icon, and macOS doesn't announce such apps
@@ -52,6 +61,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var hasSeenPerch = false
+
+    private func refreshWidgets() {
+        let claude = ClaudeStatus.load(from: collector.folder)
+        if claude != widgets.model.claude { widgets.model.claude = claude }
+        widgets.apply(WidgetSettings.load(from: collector.folder))
+    }
 
     private func quitIfPerchQuit() {
         let isPerchRunning = !NSRunningApplication.runningApplications(withBundleIdentifier: Self.perchBundleID).isEmpty

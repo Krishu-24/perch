@@ -48,6 +48,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Claude") {
                     Label("Claude", systemImage: "sparkles")
                 }
+                NavigationLink(value: "Widgets") {
+                    Label("Widgets", systemImage: "square.grid.2x2")
+                }
 //                NavigationLink(value: "Downloads") {
 //                    Label("Downloads", systemImage: "square.and.arrow.down")
 //                }
@@ -85,6 +88,8 @@ struct SettingsView: View {
                     Charge()
                 case "Claude":
                     ClaudeSettings()
+                case "Widgets":
+                    DevSettings()
                 case "Shortcuts":
                     Shortcuts()
                 case "Extensions":

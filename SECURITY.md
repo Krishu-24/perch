@@ -52,11 +52,12 @@ Source: [`helper/`](helper/).
 | | |
 |---|---|
 | **Sandbox** | Off, by design. Hardened runtime on. Signed ad hoc. |
-| **Processes it starts** | Your login shell (only when you open the terminal); `git status`, `git log -1` and `git remote get-url` in up to 6 recent projects every 6 seconds; `lsof` for listening ports every 6 seconds; `gh auth status`, `gh api graphql` and `gh run list` every 3 minutes, only when `gh` is installed and signed in. Each runs with a time limit and with prompts turned off (`GIT_TERMINAL_PROMPT=0`, `GH_PROMPT_DISABLED=1`). |
+| **Processes it starts** | Your login shell (only when you open the terminal); `git status`, `git log -1` and `git remote get-url` in up to 6 recent projects every 6 seconds; `lsof` for listening ports and `ps` for the dev servers' commands every 6 seconds; `gh auth status`, `gh api graphql` and `gh run list` every 3 minutes, only when `gh` is installed and signed in. Each runs with a time limit and with prompts turned off (`GIT_TERMINAL_PROMPT=0`, `GH_PROMPT_DISABLED=1`). |
 | **Network** | None of its own. `gh` talks to api.github.com with the token `gh` stores. |
 | **Credentials** | Never read. It doesn't open `gh`'s token, your Keychain or SSH keys. |
 | **Files it writes** | `dev.json` and `helper-state.json` in `~/Library/Application Support/Perch/`. |
-| **Files it reads** | The mod's `sessions/*.json`, to learn which folders you work in; the Git repositories in those folders. |
+| **Files it reads** | The mod's `sessions/*.json` and `limits.json`, Perch's `settings.json`, the Git repositories you work in, and the last 512 KB of the newest three Codex session logs (`~/.codex/sessions/` and `~/.codex/archived_sessions/`, `rollout-*.jsonl` only) for Codex's limits. It never opens `~/.codex/auth.json`. |
+| **Windows** | The drop-down terminal, and the desktop widgets: a borderless panel at desktop-icon level that never takes focus, on every Space. Clicking a widget opens a link in your browser or the terminal in a listed project. |
 | **Keyboard** | One global hot key, Control-`, through Carbon's `RegisterEventHotKey`. It needs no Accessibility permission and receives only that combination. |
 | **Links it accepts** | `perch-helper://terminal` (toggle), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
 

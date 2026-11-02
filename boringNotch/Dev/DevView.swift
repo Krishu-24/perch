@@ -89,6 +89,14 @@ struct DevTabContent: View {
 
 // MARK: - Building blocks
 
+/// The desktop widgets' title colours, so the notch and the desktop read as one set.
+enum DevPalette {
+    static let git = Color(red: 1.0, green: 0.62, blue: 0.1)
+    static let github = Color(red: 0.52, green: 0.5, blue: 1.0)
+    static let actions = Color(red: 0.27, green: 0.6, blue: 1.0)
+    static let servers = Color(red: 0.24, green: 0.8, blue: 0.4)
+}
+
 /// How a card looks: calm when there's nothing to do, outlined when it wants you.
 enum DevTone {
     case quiet, good, busy, attention, problem
@@ -110,6 +118,8 @@ enum DevTone {
 struct DevTile: View {
     let title: String
     let icon: String
+    /// The label's colour, matching the desktop widget of the same name.
+    var tint: Color = .white.opacity(0.42)
     let headline: String
     var detail: String?
     var tone: DevTone = .quiet
@@ -133,7 +143,7 @@ struct DevTile: View {
                         Circle().fill(tone.color).frame(width: 6, height: 6)
                     }
                 }
-                .foregroundColor(.white.opacity(0.42))
+                .foregroundColor(tint)
                 Spacer(minLength: 0)
                 Text(headline)
                     .font(.system(size: 13, weight: .semibold))
@@ -370,25 +380,25 @@ struct DevPullRequestsTile: View {
             let mine = github.pullRequests
             let failing = mine.first { Self.checksTone($0.checks) == .problem }
             if let review = reviews.first {
-                DevTile(title: "Pull requests", icon: "arrow.triangle.pull",
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", tint: DevPalette.github,
                         headline: reviews.count == 1 ? "1 review waiting" : "\(reviews.count) reviews waiting",
                         detail: "\(review.title) · \(repoName(review.repo))", tone: .attention,
                         hint: "Open \(review.repo) #\(review.number)", action: { actions.open(review.url) })
             } else if let failing {
-                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", headline: "Checks failing",
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", tint: DevPalette.github, headline: "Checks failing",
                         detail: "\(failing.title) · #\(failing.number)", tone: .problem,
                         hint: "Open \(failing.repo) #\(failing.number)", action: { actions.open(failing.url) })
             } else if let top = mine.first {
-                DevTile(title: "Pull requests", icon: "arrow.triangle.pull",
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", tint: DevPalette.github,
                         headline: mine.count == 1 ? "1 open" : "\(mine.count) open",
                         detail: top.title, tone: Self.checksTone(top.checks),
                         hint: "Open \(top.repo) #\(top.number)", action: { actions.open(top.url) })
             } else {
-                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", headline: "All clear",
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", tint: DevPalette.github, headline: "All clear",
                         detail: "Nothing open or waiting", action: { actions.open("https://github.com/pulls") })
             }
         } else {
-            DevGitHubSetupTile(title: "Pull requests", icon: "arrow.triangle.pull", status: status, actions: actions)
+            DevGitHubSetupTile(title: "Pull requests", icon: "arrow.triangle.pull", tint: DevPalette.github, status: status, actions: actions)
         }
     }
 }
@@ -404,15 +414,15 @@ struct DevActionsTile: View {
             // A running or failed run is the news; otherwise the newest one.
             if let run = runs.first(where: \.isRunning) ?? runs.first(where: { Self.isFailure($0) }) ?? runs.first {
                 let (headline, tone) = Self.summary(run)
-                DevTile(title: "Actions", icon: "bolt.horizontal.fill", headline: headline,
+                DevTile(title: "Actions", icon: "bolt.horizontal.fill", tint: DevPalette.actions, headline: headline,
                         detail: "\(repoName(run.repo)) · \(run.branch) · \(ClaudeFormatting.ageText(run.createdAt))",
                         tone: tone, hint: "Open the \(run.workflow) run", action: { actions.open(run.url) })
             } else {
-                DevTile(title: "Actions", icon: "bolt.horizontal.fill", headline: "No recent runs",
+                DevTile(title: "Actions", icon: "bolt.horizontal.fill", tint: DevPalette.actions, headline: "No recent runs",
                         detail: "In your projects")
             }
         } else {
-            DevGitHubSetupTile(title: "Actions", icon: "bolt.horizontal.fill", status: status, actions: actions)
+            DevGitHubSetupTile(title: "Actions", icon: "bolt.horizontal.fill", tint: DevPalette.actions, status: status, actions: actions)
         }
     }
 
@@ -432,19 +442,20 @@ struct DevActionsTile: View {
 struct DevGitHubSetupTile: View {
     let title: String
     let icon: String
+    var tint: Color = .white.opacity(0.42)
     let status: GitHubStatus
     let actions: DevActions
 
     var body: some View {
         switch status {
         case .notInstalled:
-            DevTile(title: title, icon: icon, headline: "Connect GitHub", detail: "brew install gh",
+            DevTile(title: title, icon: icon, tint: tint, headline: "Connect GitHub", detail: "brew install gh",
                     hint: "Open the terminal to install the GitHub CLI", action: actions.toggleTerminal)
         case .signedOut:
-            DevTile(title: title, icon: icon, headline: "Connect GitHub", detail: "Run gh auth login",
+            DevTile(title: title, icon: icon, tint: tint, headline: "Connect GitHub", detail: "Run gh auth login",
                     hint: "Open the terminal to sign in", action: actions.toggleTerminal)
         case .failed, .ok:
-            DevTile(title: title, icon: icon, headline: "GitHub unreachable", detail: "Click to try again",
+            DevTile(title: title, icon: icon, tint: tint, headline: "GitHub unreachable", detail: "Click to try again",
                     action: actions.refresh)
         }
     }
@@ -459,11 +470,11 @@ struct DevServersTile: View {
     var body: some View {
         if let first = servers.first {
             let more = servers.count > 1 ? " · +\(servers.count - 1) more" : ""
-            DevTile(title: "Dev servers", icon: "server.rack", headline: "localhost:\(first.port)",
+            DevTile(title: "Dev servers", icon: "server.rack", tint: DevPalette.servers, headline: "localhost:\(first.port)",
                     detail: "\(first.projectName) · \(first.command)\(more)", tone: .good,
                     hint: "Open \(first.url.absoluteString)", action: { actions.open(first.url.absoluteString) })
         } else {
-            DevTile(title: "Dev servers", icon: "server.rack", headline: "None running",
+            DevTile(title: "Dev servers", icon: "server.rack", tint: DevPalette.servers, headline: "None running",
                     detail: "Nothing listening yet")
         }
     }
@@ -486,19 +497,19 @@ struct DevGitTile: View {
         let dirty = projects.filter { !$0.isClean }
         if let top = dirty.first {
             let others = dirty.count > 1 ? "\(dirty.count) projects" : top.name
-            DevTile(title: "Git", icon: "arrow.triangle.branch",
+            DevTile(title: "Git", icon: "arrow.triangle.branch", tint: DevPalette.git,
                     headline: "Changes in \(others)",
                     detail: Self.detail(top), tone: .attention,
                     hint: "Open the terminal in \(top.name)", action: { actions.openTerminal(top) })
         } else if let top = projects.first {
             let ahead = projects.first { $0.ahead > 0 }
-            DevTile(title: "Git", icon: "arrow.triangle.branch",
+            DevTile(title: "Git", icon: "arrow.triangle.branch", tint: DevPalette.git,
                     headline: ahead.map { "\($0.name) ↑\($0.ahead) to push" } ?? "All committed",
                     detail: projects.count == 1 ? "\(top.name) · \(top.branch)" : "\(projects.count) projects",
                     tone: ahead == nil ? .good : .busy,
                     hint: "Open the terminal in \((ahead ?? top).name)", action: { actions.openTerminal(ahead ?? top) })
         } else {
-            DevTile(title: "Git", icon: "arrow.triangle.branch", headline: "No projects yet",
+            DevTile(title: "Git", icon: "arrow.triangle.branch", tint: DevPalette.git, headline: "No projects yet",
                     detail: "Work with Claude in a repo")
         }
     }

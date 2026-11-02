@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0 · 3 November 2026
+
+### Added
+
+- **Desktop widgets**, drawn by Perch Helper on your desktop beneath your windows: Git (projects to do,
+  with changed files and commits to push or pull), GitHub (reviews waiting on you and your checks),
+  Actions (running and failed runs, with a live timer), Dev servers (project, command and port),
+  Contributions (the last 24 weeks and your streak), and Claude and Codex limits. Each leads with one
+  big number. Settings → Widgets turns them off or moves them to another corner.
+- **Limits tab**: Claude Code and Codex side by side, five-hour and weekly, with exact reset times.
+- **Codex limits**, read from Codex's own session logs on your Mac.
+- Dev servers now show what they run (`next dev`, `vite`, `uvicorn main:app`).
+
+### Changed
+
+- The notch's tabs are icons: Home, Terminal, Limits, Claude and Dev. The Terminal tab drops the terminal down.
+- The Claude tab shows up to six sessions in two columns, with nothing to scroll.
+- The Dev tab's card titles take the widgets' colours.
+
 ## 1.2.0 · 3 November 2026
 
 ### Changed

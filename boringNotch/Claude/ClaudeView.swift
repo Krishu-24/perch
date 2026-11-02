@@ -29,17 +29,17 @@ struct ClaudeTabContent: View {
     let usage: ClaudeUsageSnapshot?
     let isConnected: Bool
     let onOpen: (ClaudeSession) -> Void
-    /// Off only for snapshots: ImageRenderer draws a ScrollView's content blank.
+    /// Unused since the list stopped scrolling; kept so older callers still compile.
     var isScrollable = true
 
+    /// Two columns of three: six sessions at a glance, with nothing to scroll.
+    static let visibleLimit = 6
+
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            ClaudeLimitsPanel(usage: usage, isConnected: isConnected)
-                .frame(width: 168)
-            sessionsPanel
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
-        .padding(.top, 4)
+        // Limits have their own tab now, so the sessions get the full width.
+        sessionsPanel
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.top, 4)
     }
 
     @ViewBuilder
@@ -55,21 +55,25 @@ struct ClaudeTabContent: View {
                 detail: "Start a chat in Claude Code and it shows up here."
             )
         } else {
-            if isScrollable {
-                ScrollView(.vertical, showsIndicators: false) {
-                    sessionRows
-                }
-                .scrollBounceBehavior(.basedOnSize)
-            } else {
-                sessionRows
-            }
+            sessionGrid
         }
     }
 
-    private var sessionRows: some View {
-        LazyVStack(spacing: 2) {
-            ForEach(sessions) { session in
+    /// Sessions in two columns, needs-you first; past six, the last cell counts the rest.
+    private var sessionGrid: some View {
+        let overflow = sessions.count > Self.visibleLimit
+        let shown = Array(sessions.prefix(overflow ? Self.visibleLimit - 1 : Self.visibleLimit))
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                         alignment: .leading, spacing: 2) {
+            ForEach(shown) { session in
                 ClaudeSessionRow(session: session) { onOpen(session) }
+            }
+            if overflow {
+                Text("+\(sessions.count - shown.count) more")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.white.opacity(0.45))
+                    .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                    .padding(.leading, 32)
             }
         }
     }

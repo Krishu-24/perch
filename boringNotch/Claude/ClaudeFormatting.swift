@@ -25,6 +25,20 @@ enum ClaudeFormatting {
         date > now ? "Resets in \(shortDuration(date.timeIntervalSince(now)))" : "Resets soon"
     }
 
+    /// "Resets 11:01 AM · in 1h 20m" today, "Resets Thu 2:51 PM" on another day;
+    /// "Resets soon" once the time has passed.
+    static func resetDetail(_ date: Date, includeCountdown: Bool, now: Date = Date(),
+                            calendar: Calendar = .current, locale: Locale = .current) -> String {
+        guard date > now else { return "Resets soon" }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.setLocalizedDateFormatFromTemplate(calendar.isDate(date, inSameDayAs: now) ? "jmm" : "EEEjmm")
+        let clock = formatter.string(from: date)
+        return includeCountdown ? "Resets \(clock) · in \(shortDuration(date.timeIntervalSince(now)))" : "Resets \(clock)"
+    }
+
     /// "now" under a minute, otherwise "4m ago", "2h ago".
     static func ageText(_ date: Date, now: Date = Date()) -> String {
         let interval = now.timeIntervalSince(date)

@@ -20,6 +20,8 @@ final class Collector {
     private static let actionsRepoLimit = 4
 
     let folder: URL
+    /// Called on the main queue with every snapshot written, for the desktop widgets.
+    var onUpdate: ((DevSnapshot) -> Void)?
     private let home: String
     private let queue = DispatchQueue(label: "perch.helper.collector")
     private var localTimer: DispatchSourceTimer?
@@ -29,6 +31,10 @@ final class Collector {
     private var servers: [DevServer] = []
     private var github: GitHubSummary?
     private var githubStatus: GitHubStatus = .ok
+    private var codex: CodexLimits?
+    private var lastCodexCheck = Date.distantPast
+    /// Codex's session files change with each reply; a look every 30 seconds is plenty.
+    private static let codexInterval: TimeInterval = 30
     /// Project folders and when they were last seen, newest first; kept across launches.
     private var recentRoots: [String: Date] = [:]
     /// The projects' paths, readable from any thread without waiting on a slow GitHub call.
@@ -75,6 +81,10 @@ final class Collector {
     // MARK: - Local
 
     private func collectLocal() {
+        if Date().timeIntervalSince(lastCodexCheck) >= Self.codexInterval {
+            lastCodexCheck = Date()
+            codex = collectCodex()
+        }
         servers = collectServers()
         let roots = recentProjectRoots(adding: claudeSessionFolders() + servers.map(\.directory))
         projects = roots.compactMap(gitProject)
@@ -91,8 +101,46 @@ final class Collector {
         guard !listeners.isEmpty else { return [] }
         let pids = Set(listeners.map(\.pid)).map(String.init).joined(separator: ",")
         let cwd = Shell.run("lsof", ["-a", "-d", "cwd", "-p", pids, "-Fpn"])?.output ?? ""
-        return ListeningPortsParser.devServers(
+        var servers = ListeningPortsParser.devServers(
             listeners: listeners, directories: ListeningPortsParser.parseWorkingDirectories(cwd), home: home)
+        guard !servers.isEmpty else { return [] }
+
+        // What each one runs, so a card can say "next dev" rather than "node".
+        let serverPids = Set(servers.map(\.pid)).map(String.init).joined(separator: ",")
+        var arguments: [Int: String] = [:]
+        for line in (Shell.run("ps", ["-o", "pid=,args=", "-p", serverPids])?.output ?? "").split(separator: "\n") {
+            let parts = line.trimmingCharacters(in: .whitespaces).split(separator: " ", maxSplits: 1)
+            if parts.count == 2, let pid = Int(parts[0]) { arguments[pid] = String(parts[1]) }
+        }
+        for index in servers.indices {
+            servers[index].summary = arguments[servers[index].pid].map(ProcessSummary.summarize)
+        }
+        return servers
+    }
+
+    /// The newest limit reading in Codex's session files, if you use Codex on this Mac.
+    private func collectCodex() -> CodexLimits? {
+        let codexFolder = URL(fileURLWithPath: home).appendingPathComponent(".codex", isDirectory: true)
+        var files: [(url: URL, modified: Date)] = []
+        for folder in ["sessions", "archived_sessions"] {
+            let root = codexFolder.appendingPathComponent(folder, isDirectory: true)
+            guard let walker = FileManager.default.enumerator(
+                at: root, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]) else { continue }
+            for case let url as URL in walker where url.lastPathComponent.hasPrefix("rollout-") && url.pathExtension == "jsonl" {
+                let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                files.append((url, modified))
+            }
+        }
+        for file in files.sorted(by: { $0.modified > $1.modified }).prefix(3) {
+            // The newest reading is near the end; read only the last part of a long file.
+            guard let handle = try? FileHandle(forReadingFrom: file.url) else { continue }
+            defer { try? handle.close() }
+            let size = (try? handle.seekToEnd()) ?? 0
+            try? handle.seek(toOffset: size > 512_000 ? size - 512_000 : 0)
+            let tail = String(decoding: handle.readDataToEndOfFile(), as: UTF8.self)
+            if let limits = CodexUsageParser.latest(in: tail) { return limits }
+        }
+        return nil
     }
 
     /// The folders Claude Code sessions ran in, from the perch-bridge mod's files.
@@ -198,7 +246,8 @@ final class Collector {
 
     private func write() {
         let snapshot = DevSnapshot(updatedAt: Date(), projects: projects, servers: servers,
-                                   github: github, githubStatus: githubStatus)
+                                   github: github, githubStatus: githubStatus, codex: codex)
+        if let onUpdate { DispatchQueue.main.async { onUpdate(snapshot) } }
         guard let data = try? DevSnapshot.encoder.encode(snapshot) else { return }
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try? data.write(to: folder.appendingPathComponent(DevSnapshot.fileName), options: .atomic)

@@ -16,6 +16,7 @@ final class DevStore: ObservableObject {
 
     @Published private(set) var snapshot: DevSnapshot?
     @Published private(set) var isHelperRunning = false
+    @Published private(set) var widgetSettings = WidgetSettings.load(from: ClaudeSessionStore.folder)
 
     static let helperBundleID = "io.github.krishu-24.perch.helper"
     private static let file = ClaudeSessionStore.folder.appendingPathComponent(DevSnapshot.fileName)
@@ -67,6 +68,16 @@ final class DevStore: ObservableObject {
         var components = URLComponents(string: "perch-helper://terminal")!
         components.queryItems = [URLQueryItem(name: "cd", value: project.path)]
         if let url = components.url { NSWorkspace.shared.open(url) }
+    }
+
+    /// Saves the desktop widget settings; Perch Helper picks them up within a few seconds.
+    func saveWidgetSettings(_ settings: WidgetSettings) {
+        widgetSettings = settings
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(settings) else { return }
+        try? FileManager.default.createDirectory(at: ClaudeSessionStore.folder, withIntermediateDirectories: true)
+        try? data.write(to: ClaudeSessionStore.folder.appendingPathComponent(WidgetSettings.fileName), options: .atomic)
     }
 
     /// Asks the helper to collect everything now, GitHub included.

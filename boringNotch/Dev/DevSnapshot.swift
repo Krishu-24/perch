@@ -14,13 +14,17 @@ public struct DevSnapshot: Codable, Equatable {
     public var servers: [DevServer]
     public var github: GitHubSummary?
     public var githubStatus: GitHubStatus
+    /// Codex's plan limits, from its own session files; nil when Codex isn't used here.
+    public var codex: CodexLimits?
 
-    public init(updatedAt: Date, projects: [GitProject], servers: [DevServer], github: GitHubSummary?, githubStatus: GitHubStatus) {
+    public init(updatedAt: Date, projects: [GitProject], servers: [DevServer], github: GitHubSummary?,
+                githubStatus: GitHubStatus, codex: CodexLimits? = nil) {
         self.updatedAt = updatedAt
         self.projects = projects
         self.servers = servers
         self.github = github
         self.githubStatus = githubStatus
+        self.codex = codex
     }
 
     public static let fileName = "dev.json"
@@ -71,6 +75,34 @@ public struct GitProject: Codable, Equatable, Identifiable {
     }
 }
 
+/// One plan window: how much is used, and when it starts over.
+public struct UsageWindow: Codable, Equatable {
+    public var usedPercent: Double
+    public var resetsAt: Date?
+
+    public init(usedPercent: Double, resetsAt: Date?) {
+        self.usedPercent = usedPercent
+        self.resetsAt = resetsAt
+    }
+}
+
+/// Codex's five-hour and weekly windows as of its last reply.
+public struct CodexLimits: Codable, Equatable {
+    /// `plus`, `pro`, … as Codex reports it.
+    public var plan: String?
+    public var fiveHour: UsageWindow?
+    public var week: UsageWindow?
+    /// When Codex recorded these numbers.
+    public var capturedAt: Date
+
+    public init(plan: String?, fiveHour: UsageWindow?, week: UsageWindow?, capturedAt: Date) {
+        self.plan = plan
+        self.fiveHour = fiveHour
+        self.week = week
+        self.capturedAt = capturedAt
+    }
+}
+
 /// A process listening on a local TCP port, started from a project folder.
 public struct DevServer: Codable, Equatable, Identifiable {
     public var port: Int
@@ -78,16 +110,19 @@ public struct DevServer: Codable, Equatable, Identifiable {
     public var pid: Int
     /// The folder the process runs in.
     public var directory: String
+    /// What was run, shortened: "next dev", "vite", "uvicorn main:app".
+    public var summary: String?
 
     public var id: Int { port }
     public var url: URL { URL(string: "http://localhost:\(port)")! }
     public var projectName: String { URL(fileURLWithPath: directory).lastPathComponent }
 
-    public init(port: Int, command: String, pid: Int, directory: String) {
+    public init(port: Int, command: String, pid: Int, directory: String, summary: String? = nil) {
         self.port = port
         self.command = command
         self.pid = pid
         self.directory = directory
+        self.summary = summary
     }
 }
 
@@ -197,5 +232,29 @@ public struct WorkflowRun: Codable, Equatable, Identifiable {
         self.conclusion = conclusion
         self.url = url
         self.createdAt = createdAt
+    }
+}
+
+/// Where the widget board sits on the desktop.
+public enum WidgetPosition: String, Codable, CaseIterable {
+    case topRight, topLeft, bottomRight, bottomLeft
+}
+
+/// `settings.json` in Perch's folder. Perch writes it; Perch Helper reads it.
+public struct WidgetSettings: Codable, Equatable {
+    public var showDesktopWidgets: Bool
+    public var position: WidgetPosition
+
+    public init(showDesktopWidgets: Bool = true, position: WidgetPosition = .topRight) {
+        self.showDesktopWidgets = showDesktopWidgets
+        self.position = position
+    }
+
+    public static let fileName = "settings.json"
+
+    public static func load(from folder: URL) -> WidgetSettings {
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent(fileName)),
+              let settings = try? JSONDecoder().decode(WidgetSettings.self, from: data) else { return WidgetSettings() }
+        return settings
     }
 }

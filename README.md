@@ -4,14 +4,14 @@
 
 **Claude, perched in your MacBook's notch.**
 
-Your Claude Code sessions and plan limits, a terminal that drops out of the notch,
-and your whole dev setup at a glance: pull requests, Actions, dev servers and Git.
+Your Claude Code and Codex limits, live Claude sessions, a terminal that drops out of the notch,
+and desktop widgets for your whole dev setup: Git, pull requests, Actions and dev servers.
 
-![Version](https://img.shields.io/badge/version-1.2.0-d97757)
+![Version](https://img.shields.io/badge/version-1.3.0-d97757)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-<img src="docs/images/claude-tab.png" alt="The Claude tab in the open notch: plan limits on the left, sessions on the right" width="680">
+<img src="docs/images/desktop-widgets.png" alt="Perch's desktop widgets: Git, GitHub, Actions, dev servers, contributions, and Claude and Codex limits" width="720">
 
 </div>
 
@@ -35,15 +35,22 @@ and your whole dev setup at a glance: pull requests, Actions, dev servers and Gi
 ## What Perch does
 
 Perch is an independent notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch).
-It is not made by Anthropic or The Bored Team. Hover over the notch and you get three tabs:
+It is not made by Anthropic or The Bored Team. Hover over the notch for a row of icon tabs:
 
-- **Home**: music, calendar, battery and the webcam mirror, all from Boring Notch.
-- **Claude**: your Claude Code sessions and plan limits.
-- **Dev**: the terminal, GitHub, dev servers and your projects.
+| Tab | What's there |
+|---|---|
+| ⌂ **Home** | Music, calendar, battery and the webcam mirror, all from Boring Notch. |
+| `>_` **Terminal** | Drops the terminal out of the notch (same as Control-`). |
+| ◔ **Limits** | Your Claude Code and Codex plan limits, side by side. |
+| ✻ **Claude** | Every Claude Code session, and what it's doing. |
+| ▥ **Dev** | GitHub, Actions, dev servers and Git, at a glance. |
+
+And on your desktop, beneath your windows, a set of **widgets** for the same things, in more detail.
 
 | | Feature | What you get |
 |---|---|---|
-| 📊 | **Plan limits** | Five-hour and weekly usage as bars that go green → amber → red, with "Resets in 2h 13m". |
+| 📊 | **Plan limits** | Claude Code and Codex, five-hour and weekly, with "Resets 11:01 AM · in 1h 20m". |
+| 🖥️ | **Desktop widgets** | Git, GitHub reviews, Actions, dev servers, your contribution graph, and both plans' limits, on your desktop. |
 | 🟠 | **Live sessions** | Every Claude Code session: *Working* (and the tool it's using), *Needs you*, or *Your turn*. |
 | ✻ | **A notch that follows you** | The closed notch shows whatever you're *not* looking at: Claude while you watch something, what's playing while you're in Claude. |
 | ✋ | **Needs-you alerts** | A pulsing amber hand on the closed notch when Claude is waiting for your approval. |
@@ -52,6 +59,12 @@ It is not made by Anthropic or The Bored Team. Hover over the notch and you get 
 | ↗️ | **One click away** | Click a session to jump to it, a pull request or run to open it, a dev server to open `localhost`, a project to open the terminal there. |
 
 It works with Claude Code in the **Claude desktop app's Code tab** and in **any terminal**.
+
+<p align="center">
+  <img src="docs/images/limits.png" alt="The Limits tab: Claude Code and Codex cards with five-hour and weekly bars" width="680">
+  <br>
+  <sub>The Limits tab.</sub>
+</p>
 
 <p align="center">
   <img src="docs/images/dev-tab.png" alt="The Dev tab: terminal button, contribution graph, pull requests and Actions runs" width="680">
@@ -106,7 +119,7 @@ None of the pieces call each other. Each writes or reads plain files in one fold
 
 ### Step 1 · Install the app
 
-1. Download **`Perch-1.2.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+1. Download **`Perch-1.3.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
 2. Unzip it and drag **Perch.app** into **Applications**.
 3. Open it. macOS will say it *can't check Perch for malicious software*, because the app isn't
    signed with a paid Apple Developer ID. To open it anyway:
@@ -166,14 +179,25 @@ Perch never sees your GitHub token: it asks `gh` for data, and `gh` keeps the to
 
 ## Using Perch
 
-### The Claude tab
-
-<img src="docs/images/near-limit.png" alt="The Claude tab close to the five-hour limit: a red 93% bar" width="560">
+### The Limits tab
 
 | Part | Meaning |
 |---|---|
-| **5-hour / Weekly bars** | How much of each plan window you've used. Green under 70%, amber under 90%, red from 90%. |
-| **Resets in …** | When that window starts over. |
+| **Claude Code / Codex** | One card each, with how long ago the numbers were read. Codex shows your plan (Plus, Pro…). |
+| **5 hours / This week** | How much of each window you've used. The bar is white with room to spare, amber past 70%, red past 90%. |
+| **Resets …** | When the window starts over: "Resets 11:01 AM · in 1h 20m" for today, "Resets Thu 2:51 PM" for later. |
+
+Claude's numbers come from the `perch-bridge` mod after each reply. Codex's come from Codex's own session
+files on your Mac, so they're as fresh as your last Codex reply.
+
+### The Claude tab
+
+<img src="docs/images/claude-tab.png" alt="The Claude tab: four sessions in two columns, one needing approval" width="560">
+
+Up to six sessions in two columns, with nothing to scroll; past that, the last spot counts the rest.
+
+| Part | Meaning |
+|---|---|
 | **✋ amber row** | Claude is waiting for you to approve something. The tool's name is in amber. |
 | **✻ spinner** | Claude is working. The tool it's running is in grey. |
 | **🟢 dot** | Claude finished and it's your turn. The time on the right is how long ago. |
@@ -235,6 +259,24 @@ green healthy, amber in progress. A grey card has nothing to report.
 
 Local cards refresh every 6 seconds; GitHub every 3 minutes.
 
+### Desktop widgets
+
+<img src="docs/images/desktop-widgets.png" alt="The desktop widgets" width="640">
+
+Perch Helper draws these on your desktop, just above the desktop icons and beneath every window, on
+every Space. Each widget leads with one big number and lists the three things behind it.
+
+| Widget | The big number | The list | Click a row to |
+|---|---|---|---|
+| **Git** | Projects with uncommitted work or commits to push or pull | Each project: ✎ changed files, ↑ to push, ↓ to pull, or *Up to date* | Open the terminal there |
+| **GitHub** | Reviews waiting on you, plus your pull requests' checks as dots | Reviews first, then your pull requests | Open it on GitHub |
+| **Actions** | Runs going now (or failed) | The latest runs, with a live timer on running ones | Open the run |
+| **Dev servers** | Servers running | Project, what it runs (`next dev`, `vite`…) and its port | Open `localhost` |
+| **Contributions** | Your contributions in the last year | The last 24 weeks, plus your streak | — |
+| **Claude / Codex** | Five-hour usage | The week's usage, and what Claude is doing or your Codex plan | — |
+
+Turn them off or move them to another corner in **Settings → Widgets**.
+
 ### Settings → Claude
 
 | Setting | Default | What it does |
@@ -243,6 +285,15 @@ Local cards refresh every 6 seconds; GitHub every 3 minutes.
 | Open the notch when Claude needs you | Off | Pops the notch open on the Claude tab the moment a session starts waiting. |
 | Status / Active sessions / Limits updated | — | Whether the mod has connected, and how fresh the data is. |
 | Show Data Folder in Finder | — | Opens `~/Library/Application Support/Perch`. |
+
+### Settings → Widgets
+
+| Setting | Default | What it does |
+|---|---|---|
+| Show widgets on the desktop | On | The desktop widgets described above. |
+| Corner | Top right | Which corner of the screen they sit in, clear of the menu bar and Dock. |
+| Perch Helper / GitHub | — | Whether the helper is running and GitHub is connected. |
+| Refresh Now | — | Collects everything again straight away, GitHub included. |
 
 ---
 
@@ -286,10 +337,13 @@ Here is everything it does:
 |---|---|---|
 | Your login shell | The drop-down terminal | When you open it |
 | `git status`, `git log -1`, `git remote get-url` | Projects card | Every 6 s, in up to 6 recent projects |
-| `lsof` (listening ports and their folders) | Dev servers card | Every 6 s |
+| `lsof` and `ps` (listening ports, their folders and commands) | Dev servers | Every 6 s |
+| Reads the newest 3 Codex session files (`~/.codex/…/rollout-*.jsonl`, last 512 KB of each) | Codex limits | Every 30 s |
 | `gh auth status`, `gh api graphql`, `gh run list` | GitHub cards | Every 3 min, only if `gh` is installed and signed in |
 
 - **It doesn't make network requests itself.** Only `gh` talks to GitHub, with the token `gh` keeps.
+- **It never opens Codex's login** (`~/.codex/auth.json`) or any other credentials; only Codex's session logs.
+- **It draws the desktop widgets** in a window at desktop level that never takes focus.
 - **It writes only** `dev.json` and `helper-state.json` (your recent project folders) in Perch's folder.
 - **It reads** the mod's session files, just to learn which folders you work in.
 - **Its links are locked down.** Perch talks to it through `perch-helper://` links. The only one that
@@ -305,7 +359,8 @@ Here is everything it does:
 |---|---|---|
 | `sessions/<id>.json` | Session ID, project folder, first 120 characters of your latest prompt, tool name, status, time. | Deleted after 24 hours. |
 | `limits.json` | Five-hour and weekly usage and reset times. | Overwritten as it changes. |
-| `dev.json` | Your recent projects' Git status, dev servers, and the GitHub data on the Dev tab. | Overwritten every few seconds. |
+| `dev.json` | Your recent projects' Git status, dev servers, Codex's limits, and the GitHub data on the Dev tab. | Overwritten every few seconds. |
+| `settings.json` | Whether to show the desktop widgets, and in which corner. | Until you change it. |
 | `helper-state.json` | Up to 12 recent project folders, so they survive a restart. | Folders that no longer exist are dropped. |
 
 These are plain text files, readable by any app running as you, just like Claude Code's own history
@@ -341,6 +396,7 @@ perch/
 ├── boringNotch/
 │   ├── Claude/                        ← the Claude tab and closed-notch status
 │   │   ├── ClaudeView.swift           the tab: limits panel and session rows
+│   │   ├── ClaudeLimitsView.swift     the Limits tab: Claude Code and Codex cards
 │   │   ├── ClaudeLiveActivity.swift   the closed notch, and the rule for when it shows Claude
 │   │   ├── ClaudeSettings.swift       Settings → Claude
 │   │   ├── ClaudeSessionStore.swift   reads the mod's files; tracks the app you're in
@@ -359,6 +415,9 @@ perch/
 │   │   ├── HotKey.swift               Control-`
 │   │   ├── Shell.swift                runs git, lsof and gh safely
 │   │   └── main.swift                 the app and its perch-helper:// links
+│   │   ├── DesktopWidgets.swift       the desktop window that holds the widgets
+│   ├── Sources/PerchWidgets/          the desktop widgets' SwiftUI views
+│   ├── Sources/WidgetSnapshots/       renders the widgets to a PNG with sample data
 │   ├── Sources/PerchDevCore/          parsing, kept free of AppKit so it's easy to test
 │   └── Tests/                         unit tests for the parsing
 ├── claude-mod/perch-bridge/           the Claude Code mod
@@ -381,6 +440,7 @@ perch/
 | Refresh GitHub more or less often | `githubInterval` in `helper/Sources/PerchHelper/Collector.swift`. |
 | Show more projects | `projectLimit` in `Collector.swift`. |
 | Change when the closed notch shows Claude | `ClaudeLiveActivity.shouldShow` in `ClaudeLiveActivity.swift`. |
+| Restyle or add a desktop widget | `helper/Sources/PerchWidgets/WidgetBoard.swift`; sizes are in `WidgetLayout`. |
 | Add a card to the Dev tab | Add a `DevTile` in `DevView.swift`, and the data it needs to `DevSnapshot.swift` and `Collector.swift`. |
 | Move the green/amber/red thresholds | `ClaudeLimitBar.tint(for:)` in `ClaudeView.swift`. |
 | Send more (or less) from Claude Code | `register.ts`; add the new fields to `ClaudeSession` too. |
@@ -391,8 +451,11 @@ perch/
 # Every test: Claude and Dev logic, the helper's parsers, and the mod
 scripts/claude-tests/run.sh
 
-# Render the Claude and Dev tabs and the closed notch with sample data → build/claude-snapshots/*.png
+# Render the notch tabs and the closed notch with sample data → build/claude-snapshots/*.png
 scripts/claude-tab-snapshots/render.sh
+
+# Render the desktop widgets → build/widget-snapshots/*.png
+swift run --package-path helper -c release WidgetSnapshots build/widget-snapshots
 ```
 
 The mod's tests need the Claude Code CLI. If `claude` isn't on your PATH, point `CLAUDE_CLI` at it:
