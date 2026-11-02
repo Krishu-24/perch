@@ -1,0 +1,5 @@
+{
+  "name": "boring-notch-claude",
+  "owner": { "name": "Boring Notch Claude (local)" },
+  "plugins": [{ "name": "notch-bridge", "source": "./notch-bridge" }]
+}
