@@ -149,14 +149,14 @@ func renderAll() throws {
         ClosedNotchFrame { ClaudeLiveActivity(needsYouCount: 0, workingCount: 0, justFinishedCount: 1, fiveHour: calmUsage.fiveHour, notchHeight: 32, notchWidth: 180) }
     })
     try render("6-dev", OpenNotchFrame(tab: "Dev") {
-        DevTabContent(snapshot: sampleDev, isHelperRunning: true, isHelperInstalled: true, isScrollable: false)
+        DevTabContent(snapshot: sampleDev, isHelperRunning: true, isHelperInstalled: true)
     })
     try render("7-dev-signed-out", OpenNotchFrame(tab: "Dev") {
         DevTabContent(snapshot: DevSnapshot(updatedAt: now, projects: sampleDev.projects, servers: [], github: nil, githubStatus: .signedOut),
-                      isHelperRunning: true, isHelperInstalled: true, isScrollable: false)
+                      isHelperRunning: true, isHelperInstalled: true)
     })
     try render("8-dev-no-helper", OpenNotchFrame(tab: "Dev") {
-        DevTabContent(snapshot: nil, isHelperRunning: false, isHelperInstalled: true, isScrollable: false)
+        DevTabContent(snapshot: nil, isHelperRunning: false, isHelperInstalled: true)
     })
     try render("4-near-limit", OpenNotchFrame {
         ClaudeTabContent(sessions: Array(busySessions.prefix(2)), usage: hotUsage, isConnected: true, onOpen: open, isScrollable: false)

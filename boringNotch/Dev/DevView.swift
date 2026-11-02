@@ -2,8 +2,10 @@
 //  DevView.swift
 //  Perch
 //
-//  The Dev tab: a row of cards for the terminal, your GitHub contributions, pull
-//  requests, Actions runs, running dev servers and your projects' Git status.
+//  The Dev tab, readable at a glance with nothing to scroll: the terminal on the
+//  left, your contribution graph as the anchor, and four cards that each answer one
+//  question (pull requests, Actions, dev servers, Git) in a word or two. A card that
+//  needs you is outlined in amber or red, so the eye goes there first.
 //
 
 import SwiftUI
@@ -46,16 +48,32 @@ struct DevTabContent: View {
     let isHelperRunning: Bool
     let isHelperInstalled: Bool
     var actions = DevActions()
-    /// Off only for snapshots: ImageRenderer draws a ScrollView's content blank.
-    var isScrollable = true
 
-    static let cardHeight: CGFloat = 128
+    static let height: CGFloat = 128
+    static let gap: CGFloat = 8
 
     var body: some View {
         if !isHelperInstalled {
             ClaudeEmptyState(title: "Perch Helper isn't installed",
                              detail: "The Dev tab and the terminal need Perch Helper. The README explains how to add it.")
-        } else if snapshot == nil {
+        } else if let snapshot {
+            HStack(spacing: Self.gap) {
+                DevTerminalTile(action: actions.toggleTerminal)
+                DevContributionsTile(github: snapshot.github, status: snapshot.githubStatus, actions: actions)
+                VStack(spacing: Self.gap) {
+                    HStack(spacing: Self.gap) {
+                        DevPullRequestsTile(github: snapshot.github, status: snapshot.githubStatus, actions: actions)
+                        DevActionsTile(github: snapshot.github, status: snapshot.githubStatus, actions: actions)
+                    }
+                    HStack(spacing: Self.gap) {
+                        DevServersTile(servers: snapshot.servers, actions: actions)
+                        DevGitTile(projects: snapshot.projects, actions: actions)
+                    }
+                }
+            }
+            .frame(height: Self.height)
+            .padding(.top, 4)
+        } else {
             VStack(spacing: 10) {
                 ClaudeEmptyState(title: isHelperRunning ? "Collecting…" : "Perch Helper isn't running",
                                  detail: "It gathers your Git status, dev servers and GitHub activity.")
@@ -65,124 +83,85 @@ struct DevTabContent: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if isScrollable {
-            ScrollView(.horizontal, showsIndicators: false) { cards }
-                .scrollBounceBehavior(.basedOnSize)
-                .mask(Self.edgeFade)
-        } else {
-            cards.mask(Self.edgeFade)
         }
-    }
-
-    /// Fades the last few points on the right, a hint that more cards scroll in.
-    static let edgeFade = LinearGradient(
-        stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.93), .init(color: .clear, location: 1)],
-        startPoint: .leading, endPoint: .trailing)
-
-    private var cards: some View {
-        HStack(alignment: .top, spacing: 8) {
-            DevTerminalTile(action: actions.toggleTerminal)
-            if let github = snapshot?.github {
-                DevContributionsCard(github: github)
-                DevPullRequestsCard(github: github, open: actions.open)
-                DevActionsCard(runs: github.runs, open: actions.open)
-            } else {
-                DevGitHubSetupCard(status: snapshot?.githubStatus ?? .failed, actions: actions)
-            }
-            DevServersCard(servers: snapshot?.servers ?? [], open: actions.open)
-            DevProjectsCard(projects: snapshot?.projects ?? [], open: actions.openTerminal)
-        }
-        .padding(.top, 4)
     }
 }
 
 // MARK: - Building blocks
 
-struct DevCard<Content: View>: View {
-    let title: String
-    let icon: String
-    let width: CGFloat
-    var accessory: String?
-    @ViewBuilder var content: Content
+/// How a card looks: calm when there's nothing to do, outlined when it wants you.
+enum DevTone {
+    case quiet, good, busy, attention, problem
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 9, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-                    .textCase(.uppercase)
-                    .tracking(0.3)
-                Spacer(minLength: 4)
-                if let accessory {
-                    Text(accessory)
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
-                }
-            }
-            .foregroundColor(.white.opacity(0.45))
-            content
-            Spacer(minLength: 0)
+    var color: Color {
+        switch self {
+        case .quiet: Color.white.opacity(0.25)
+        case .good: TerminalColors.green
+        case .busy, .attention: TerminalColors.amber
+        case .problem: TerminalColors.red
         }
-        .padding(10)
-        .frame(width: width, height: DevTabContent.cardHeight, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)))
     }
+
+    var isOutlined: Bool { self == .attention || self == .problem }
 }
 
-/// One line in a card: a status mark, a title and a grey detail line; clickable.
-struct DevRow<Leading: View>: View {
+/// One card: a small label on top, a headline that answers the card's question, and
+/// one line of detail. The whole card is the button.
+struct DevTile: View {
     let title: String
-    var tag: String?
-    let detail: String
-    var titleDesign: Font.Design = .default
+    let icon: String
+    let headline: String
+    var detail: String?
+    var tone: DevTone = .quiet
+    var hint: String?
     var action: (() -> Void)?
-    @ViewBuilder var leading: Leading
 
     @State private var isHovered = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 7) {
-            leading
-                .frame(width: 12)
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 5) {
+        Button { action?() } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Image(systemName: icon)
+                        .font(.system(size: 9, weight: .semibold))
                     Text(title)
-                        .font(.system(size: 11.5, weight: .medium, design: titleDesign))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .layoutPriority(1)
-                    if let tag {
-                        Text(tag)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
-                            .lineLimit(1)
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .textCase(.uppercase)
+                        .tracking(0.3)
+                    Spacer(minLength: 2)
+                    if tone != .quiet {
+                        Circle().fill(tone.color).frame(width: 6, height: 6)
                     }
                 }
-                Text(detail)
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.4))
+                .foregroundColor(.white.opacity(0.42))
+                Spacer(minLength: 0)
+                Text(headline)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(tone == .quiet ? .white.opacity(0.55) : .white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Text(detail ?? " ")
+                    .font(.system(size: 10.5))
+                    .foregroundColor(.white.opacity(0.42))
                     .lineLimit(1)
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(tone.isOutlined ? tone.color.opacity(isHovered ? 0.16 : 0.1) : Color.white.opacity(isHovered ? 0.1 : 0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(tone.color.opacity(tone.isOutlined ? 0.45 : 0), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 1)
-        .background(RoundedRectangle(cornerRadius: 6).fill(isHovered && action != nil ? Color.white.opacity(0.08) : .clear))
-        .contentShape(Rectangle())
-        .onTapGesture { action?() }
-        .onHover { isHovered = $0 }
-    }
-}
-
-struct DevNote: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 10.5))
-            .foregroundColor(.white.opacity(0.35))
-            .fixedSize(horizontal: false, vertical: true)
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+        .onHover { isHovered = $0 && action != nil }
+        .help(hint ?? "")
     }
 }
 
@@ -203,15 +182,11 @@ struct DevPillButton: View {
     }
 }
 
-struct DevDot: View {
-    let color: Color
-
-    var body: some View {
-        Circle().fill(color).frame(width: 7, height: 7)
-    }
+private func repoName(_ fullName: String) -> String {
+    fullName.split(separator: "/").last.map(String.init) ?? fullName
 }
 
-// MARK: - Cards
+// MARK: - Terminal
 
 struct DevTerminalTile: View {
     let action: () -> Void
@@ -220,22 +195,28 @@ struct DevTerminalTile: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 7) {
                 Image(systemName: "terminal.fill")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(.system(size: 19, weight: .medium))
                     .foregroundColor(TerminalColors.prompt)
                 Text("Terminal")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.white)
-                Text("⌃ `")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+                HStack(spacing: 1) {
+                    Image(systemName: "control")
+                        .font(.system(size: 9, weight: .bold))
+                    Text("`")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                }
+                    .foregroundColor(.white.opacity(0.5))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.2)))
+                    .background(RoundedRectangle(cornerRadius: 4).strokeBorder(Color.white.opacity(0.2)))
             }
-            .frame(width: 72, height: DevTabContent.cardHeight)
+            .frame(width: 60)
+            .frame(maxHeight: .infinity)
             .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(isHovered ? 0.11 : 0.06)))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
@@ -243,29 +224,83 @@ struct DevTerminalTile: View {
     }
 }
 
-struct DevContributionsCard: View {
-    let github: GitHubSummary
+// MARK: - Contributions
+
+struct DevContributionsTile: View {
+    let github: GitHubSummary?
+    let status: GitHubStatus
+    let actions: DevActions
 
     var body: some View {
-        DevCard(title: "Contributions", icon: "square.grid.3x3.fill", width: 178) {
-            ContributionGraph(days: github.days)
-                .frame(height: 61)
-            Text("\(github.totalContributions) this year")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white)
-            Text(github.currentStreak == 1 ? "1-day streak" : "\(github.currentStreak)-day streak")
-                .font(.system(size: 10))
-                .foregroundColor(github.currentStreak > 0 ? TerminalColors.green : .white.opacity(0.4))
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 4) {
+                Image(systemName: "square.grid.3x3.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                Text("GitHub")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .textCase(.uppercase)
+                    .tracking(0.3)
+                Spacer(minLength: 2)
+                if let github {
+                    Text("\(github.totalContributions)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.75))
+                    + Text(" this year")
+                        .font(.system(size: 9.5, weight: .medium))
+                }
+            }
+            .foregroundColor(.white.opacity(0.42))
+
+            ContributionGraph(days: github?.days ?? [])
+                .frame(width: ContributionGraph.width, height: ContributionGraph.height)
+                .opacity(github == nil ? 0.5 : 1)
+
+            Spacer(minLength: 0)
+            footer
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(width: ContributionGraph.width + 20)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)))
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        if let github {
+            let streak = github.currentStreak
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(streak > 0 ? TerminalColors.amber : .white.opacity(0.3))
+                Text(streak > 0 ? "\(streak)-day streak" : "No streak yet")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(streak > 0 ? .white : .white.opacity(0.5))
+            }
+        } else {
+            Button(action: actions.toggleTerminal) {
+                Text(status == .notInstalled ? "Install gh to connect GitHub" : "Connect GitHub · gh auth login")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundColor(TerminalColors.amber)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .buttonStyle(.plain)
+            .help("Open the terminal to sign in to the GitHub CLI")
         }
     }
 }
 
 /// GitHub's calendar: one column a week, Sunday at the top, greener for more contributions.
+/// With no data it draws an empty grid, so the card keeps its shape.
 struct ContributionGraph: View {
     let days: [ContributionDay]
 
-    private static let cell: CGFloat = 7
-    private static let gap: CGFloat = 2
+    static let weeks = 17
+    static let cell: CGFloat = 8
+    static let gap: CGFloat = 2
+    static let width = CGFloat(weeks) * (cell + gap) - gap
+    static let height = 7 * (cell + gap) - gap
 
     private static let parser: DateFormatter = {
         let formatter = DateFormatter()
@@ -294,181 +329,177 @@ struct ContributionGraph: View {
     var body: some View {
         let maxCount = days.map(\.count).max() ?? 0
         let offset = leadingBlanks
+        // Keep the newest weeks if the calendar runs longer than the card.
+        let slots = days.count + offset
+        let skip = max(0, (slots + 6) / 7 - Self.weeks) * 7
         Canvas { context, _ in
-            for (index, day) in days.enumerated() {
-                let slot = index + offset
-                let rect = CGRect(x: CGFloat(slot / 7) * (Self.cell + Self.gap),
+            let total = days.isEmpty ? Self.weeks * 7 : slots
+            for slot in skip..<total {
+                let index = slot - offset
+                let count = (index >= 0 && index < days.count) ? days[index].count : 0
+                if !days.isEmpty && index < 0 { continue }
+                let column = (slot - skip) / 7
+                let rect = CGRect(x: CGFloat(column) * (Self.cell + Self.gap),
                                   y: CGFloat(slot % 7) * (Self.cell + Self.gap),
                                   width: Self.cell, height: Self.cell)
-                context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(Self.color(for: day.count, max: maxCount)))
+                context.fill(Path(roundedRect: rect, cornerRadius: 2), with: .color(Self.color(for: count, max: maxCount)))
             }
         }
     }
 }
 
-struct DevPullRequestsCard: View {
-    let github: GitHubSummary
-    let open: (String) -> Void
+// MARK: - GitHub cards
 
-    /// Reviews waiting on you first, then your own, three at most.
-    private var rows: [(pr: PullRequest, isReview: Bool)] {
-        Array((github.reviewRequests.map { ($0, true) } + github.pullRequests.map { ($0, false) }).prefix(3))
-    }
+struct DevPullRequestsTile: View {
+    let github: GitHubSummary?
+    let status: GitHubStatus
+    let actions: DevActions
 
-    static func checksColor(_ state: String?) -> Color {
+    static func checksTone(_ state: String?) -> DevTone {
         switch state {
-        case "SUCCESS": TerminalColors.green
-        case "FAILURE", "ERROR": TerminalColors.red
-        case "PENDING", "EXPECTED": TerminalColors.amber
-        default: Color.white.opacity(0.25)
+        case "FAILURE", "ERROR": .problem
+        case "PENDING", "EXPECTED": .busy
+        case "SUCCESS": .good
+        default: .quiet
         }
-    }
-
-    static func detail(_ pr: PullRequest, isReview: Bool) -> String {
-        let name = pr.repo.split(separator: "/").last.map(String.init) ?? pr.repo
-        let state: String
-        if isReview { state = "Review requested" }
-        else if pr.isDraft { state = "Draft" }
-        else {
-            switch pr.review {
-            case "APPROVED": state = "Approved"
-            case "CHANGES_REQUESTED": state = "Changes requested"
-            default: state = "Awaiting review"
-            }
-        }
-        return "\(name) #\(pr.number) · \(state)"
     }
 
     var body: some View {
-        let total = github.pullRequests.count + github.reviewRequests.count
-        DevCard(title: "Pull requests", icon: "arrow.triangle.pull", width: 226, accessory: total > 0 ? "\(total)" : nil) {
-            if rows.isEmpty {
-                DevNote(text: "No open pull requests. Nice and tidy.")
+        if let github {
+            let reviews = github.reviewRequests
+            let mine = github.pullRequests
+            let failing = mine.first { Self.checksTone($0.checks) == .problem }
+            if let review = reviews.first {
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull",
+                        headline: reviews.count == 1 ? "1 review waiting" : "\(reviews.count) reviews waiting",
+                        detail: "\(review.title) · \(repoName(review.repo))", tone: .attention,
+                        hint: "Open \(review.repo) #\(review.number)", action: { actions.open(review.url) })
+            } else if let failing {
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", headline: "Checks failing",
+                        detail: "\(failing.title) · #\(failing.number)", tone: .problem,
+                        hint: "Open \(failing.repo) #\(failing.number)", action: { actions.open(failing.url) })
+            } else if let top = mine.first {
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull",
+                        headline: mine.count == 1 ? "1 open" : "\(mine.count) open",
+                        detail: top.title, tone: Self.checksTone(top.checks),
+                        hint: "Open \(top.repo) #\(top.number)", action: { actions.open(top.url) })
+            } else {
+                DevTile(title: "Pull requests", icon: "arrow.triangle.pull", headline: "All clear",
+                        detail: "Nothing open or waiting", action: { actions.open("https://github.com/pulls") })
             }
-            ForEach(rows, id: \.pr.id) { row in
-                DevRow(title: row.pr.title, detail: Self.detail(row.pr, isReview: row.isReview), action: { open(row.pr.url) }) {
-                    if row.isReview {
-                        Image(systemName: "eye.fill")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(TerminalColors.amber)
-                    } else {
-                        DevDot(color: Self.checksColor(row.pr.checks))
-                    }
-                }
-            }
+        } else {
+            DevGitHubSetupTile(title: "Pull requests", icon: "arrow.triangle.pull", status: status, actions: actions)
         }
     }
 }
 
-struct DevActionsCard: View {
-    let runs: [WorkflowRun]
-    let open: (String) -> Void
-
-    @ViewBuilder
-    static func mark(for run: WorkflowRun) -> some View {
-        let (symbol, color): (String, Color) = {
-            if run.isRunning { return ("clock.arrow.circlepath", TerminalColors.amber) }
-            switch run.conclusion {
-            case "success": return ("checkmark.circle.fill", TerminalColors.green)
-            case "failure", "timed_out", "startup_failure": return ("xmark.circle.fill", TerminalColors.red)
-            default: return ("minus.circle.fill", Color.white.opacity(0.35))
-            }
-        }()
-        Image(systemName: symbol)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundColor(color)
-    }
-
-    var body: some View {
-        DevCard(title: "Actions", icon: "bolt.horizontal.fill", width: 206,
-                accessory: runs.contains(where: \.isRunning) ? "running" : nil) {
-            if runs.isEmpty {
-                DevNote(text: "No recent runs in your projects.")
-            }
-            ForEach(Array(runs.prefix(3).enumerated()), id: \.offset) { _, run in
-                let repo = run.repo.split(separator: "/").last.map(String.init) ?? run.repo
-                DevRow(title: run.workflow, detail: "\(repo) · \(run.branch) · \(ClaudeFormatting.ageText(run.createdAt))",
-                       action: { open(run.url) }) {
-                    Self.mark(for: run)
-                }
-            }
-        }
-    }
-}
-
-struct DevGitHubSetupCard: View {
+struct DevActionsTile: View {
+    let github: GitHubSummary?
     let status: GitHubStatus
     let actions: DevActions
 
     var body: some View {
-        DevCard(title: "GitHub", icon: "arrow.triangle.pull", width: 226) {
-            switch status {
-            case .notInstalled:
-                DevNote(text: "Install the GitHub CLI to see pull requests, Actions and contributions here.")
-                Text("brew install gh")
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.7))
-                    .textSelection(.enabled)
-            case .signedOut:
-                DevNote(text: "Sign in once to see pull requests, Actions and contributions.")
-                Text("gh auth login")
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.7))
-                    .textSelection(.enabled)
-                DevPillButton(title: "Open Terminal", action: actions.toggleTerminal)
-            case .failed, .ok:
-                DevNote(text: "Couldn't reach GitHub. Perch tries again every few minutes.")
-                DevPillButton(title: "Try Now", action: actions.refresh)
+        if let github {
+            let runs = github.runs
+            // A running or failed run is the news; otherwise the newest one.
+            if let run = runs.first(where: \.isRunning) ?? runs.first(where: { Self.isFailure($0) }) ?? runs.first {
+                let (headline, tone) = Self.summary(run)
+                DevTile(title: "Actions", icon: "bolt.horizontal.fill", headline: headline,
+                        detail: "\(repoName(run.repo)) · \(run.branch) · \(ClaudeFormatting.ageText(run.createdAt))",
+                        tone: tone, hint: "Open the \(run.workflow) run", action: { actions.open(run.url) })
+            } else {
+                DevTile(title: "Actions", icon: "bolt.horizontal.fill", headline: "No recent runs",
+                        detail: "In your projects")
             }
+        } else {
+            DevGitHubSetupTile(title: "Actions", icon: "bolt.horizontal.fill", status: status, actions: actions)
         }
+    }
+
+    static func isFailure(_ run: WorkflowRun) -> Bool {
+        ["failure", "timed_out", "startup_failure"].contains(run.conclusion ?? "")
+    }
+
+    static func summary(_ run: WorkflowRun) -> (String, DevTone) {
+        if run.isRunning { return ("\(run.workflow) running", .busy) }
+        if isFailure(run) { return ("\(run.workflow) failed", .problem) }
+        if run.conclusion == "success" { return ("\(run.workflow) passed", .good) }
+        return ("\(run.workflow) \(run.conclusion ?? "finished")", .quiet)
     }
 }
 
-struct DevServersCard: View {
-    let servers: [DevServer]
-    let open: (String) -> Void
+/// Stands in for a GitHub card until the GitHub CLI is installed and signed in.
+struct DevGitHubSetupTile: View {
+    let title: String
+    let icon: String
+    let status: GitHubStatus
+    let actions: DevActions
 
     var body: some View {
-        DevCard(title: "Dev servers", icon: "server.rack", width: 176, accessory: servers.isEmpty ? nil : "\(servers.count)") {
-            if servers.isEmpty {
-                DevNote(text: "Nothing running. Start a dev server and it shows up here.")
-            }
-            ForEach(servers.prefix(3)) { server in
-                DevRow(title: ":\(server.port)", tag: server.command, detail: server.projectName,
-                       titleDesign: .monospaced, action: { open(server.url.absoluteString) }) {
-                    DevDot(color: TerminalColors.green)
-                }
-                .help("Open \(server.url.absoluteString)")
-            }
+        switch status {
+        case .notInstalled:
+            DevTile(title: title, icon: icon, headline: "Connect GitHub", detail: "brew install gh",
+                    hint: "Open the terminal to install the GitHub CLI", action: actions.toggleTerminal)
+        case .signedOut:
+            DevTile(title: title, icon: icon, headline: "Connect GitHub", detail: "Run gh auth login",
+                    hint: "Open the terminal to sign in", action: actions.toggleTerminal)
+        case .failed, .ok:
+            DevTile(title: title, icon: icon, headline: "GitHub unreachable", detail: "Click to try again",
+                    action: actions.refresh)
         }
     }
 }
 
-struct DevProjectsCard: View {
+// MARK: - Local cards
+
+struct DevServersTile: View {
+    let servers: [DevServer]
+    let actions: DevActions
+
+    var body: some View {
+        if let first = servers.first {
+            let more = servers.count > 1 ? " · +\(servers.count - 1) more" : ""
+            DevTile(title: "Dev servers", icon: "server.rack", headline: "localhost:\(first.port)",
+                    detail: "\(first.projectName) · \(first.command)\(more)", tone: .good,
+                    hint: "Open \(first.url.absoluteString)", action: { actions.open(first.url.absoluteString) })
+        } else {
+            DevTile(title: "Dev servers", icon: "server.rack", headline: "None running",
+                    detail: "Nothing listening yet")
+        }
+    }
+}
+
+struct DevGitTile: View {
     let projects: [GitProject]
-    let open: (GitProject) -> Void
+    let actions: DevActions
 
     static func detail(_ project: GitProject) -> String {
-        var parts: [String] = []
+        var parts: [String] = [project.branch]
         if project.changed > 0 { parts.append("\(project.changed) changed") }
         if project.untracked > 0 { parts.append("\(project.untracked) new") }
-        if parts.isEmpty { parts.append("Clean") }
         if project.ahead > 0 { parts.append("↑\(project.ahead)") }
         if project.behind > 0 { parts.append("↓\(project.behind)") }
         return parts.joined(separator: " · ")
     }
 
     var body: some View {
-        DevCard(title: "Projects", icon: "folder.fill", width: 216) {
-            if projects.isEmpty {
-                DevNote(text: "Projects you work on with Claude show up here with their Git status.")
-            }
-            ForEach(projects.prefix(3)) { project in
-                DevRow(title: project.name, tag: project.branch, detail: Self.detail(project), action: { open(project) }) {
-                    DevDot(color: project.isClean ? Color.white.opacity(0.25) : TerminalColors.amber)
-                }
-                .help("Open the terminal in \(project.name)")
-            }
+        let dirty = projects.filter { !$0.isClean }
+        if let top = dirty.first {
+            let others = dirty.count > 1 ? "\(dirty.count) projects" : top.name
+            DevTile(title: "Git", icon: "arrow.triangle.branch",
+                    headline: "Changes in \(others)",
+                    detail: Self.detail(top), tone: .attention,
+                    hint: "Open the terminal in \(top.name)", action: { actions.openTerminal(top) })
+        } else if let top = projects.first {
+            let ahead = projects.first { $0.ahead > 0 }
+            DevTile(title: "Git", icon: "arrow.triangle.branch",
+                    headline: ahead.map { "\($0.name) ↑\($0.ahead) to push" } ?? "All committed",
+                    detail: projects.count == 1 ? "\(top.name) · \(top.branch)" : "\(projects.count) projects",
+                    tone: ahead == nil ? .good : .busy,
+                    hint: "Open the terminal in \((ahead ?? top).name)", action: { actions.openTerminal(ahead ?? top) })
+        } else {
+            DevTile(title: "Git", icon: "arrow.triangle.branch", headline: "No projects yet",
+                    detail: "Work with Claude in a repo")
         }
     }
 }

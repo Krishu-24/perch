@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0 · 3 November 2026
+
+### Changed
+
+- **The Dev tab fits in one view, with nothing to scroll.** The contribution graph anchors the left; four
+  cards (pull requests, Actions, dev servers, Git) each answer one question in a word or two, such as
+  *1 review waiting* or *Changes in perch*. Cards that need you are outlined in amber, failures in red,
+  and every card is a single click to the thing it describes.
+
 ## 1.1.0 · 3 November 2026
 
 ### Added

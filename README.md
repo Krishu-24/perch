@@ -7,7 +7,7 @@
 Your Claude Code sessions and plan limits, a terminal that drops out of the notch,
 and your whole dev setup at a glance: pull requests, Actions, dev servers and Git.
 
-![Version](https://img.shields.io/badge/version-1.1.0-d97757)
+![Version](https://img.shields.io/badge/version-1.2.0-d97757)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
@@ -56,7 +56,7 @@ It works with Claude Code in the **Claude desktop app's Code tab** and in **any 
 <p align="center">
   <img src="docs/images/dev-tab.png" alt="The Dev tab: terminal button, contribution graph, pull requests and Actions runs" width="680">
   <br>
-  <sub>The Dev tab. Scroll sideways for dev servers and projects.</sub>
+  <sub>The Dev tab: everything at a glance. Amber outlines mark what needs you.</sub>
 </p>
 
 <p align="center">
@@ -106,7 +106,7 @@ None of the pieces call each other. Each writes or reads plain files in one fold
 
 ### Step 1 · Install the app
 
-1. Download **`Perch-1.1.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+1. Download **`Perch-1.2.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
 2. Unzip it and drag **Perch.app** into **Applications**.
 3. Open it. macOS will say it *can't check Perch for malicious software*, because the app isn't
    signed with a paid Apple Developer ID. To open it anyway:
@@ -211,22 +211,29 @@ The closed notch shows **whatever you aren't looking at**: Claude or what's play
 - It's your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
 - Hiding doesn't stop anything: a running command keeps going, and you come back to the same place.
 - Typing `exit` closes it; the next Control-` starts a fresh shell.
-- Click a project in the Dev tab to open the terminal right in that folder.
+- Click the **Git** card on the Dev tab to open the terminal right in the project with changes.
 
 ### The Dev tab
 
 <img src="docs/images/dev-signed-out.png" alt="The Dev tab before signing in to GitHub, with dev servers and projects" width="560">
 
-| Card | Shows | Click to |
-|---|---|---|
-| **Terminal** | — | Drop the terminal down. |
-| **Contributions** | Your GitHub contribution graph for the last 17 weeks, this year's total and your current streak. | — |
-| **Pull requests** | Reviews waiting on you (👁) first, then your open pull requests, with their checks as a dot: green passed, red failed, amber running. | Open it on GitHub. |
-| **Actions** | The latest workflow runs in your projects: ✓ passed, ✕ failed, ⟳ running. | Open the run. |
-| **Dev servers** | Anything you started that listens on a local port (`npm run dev`, `python -m http.server` …), with its port and folder. | Open `http://localhost:<port>`. |
-| **Projects** | The Git repositories you've worked in with Claude recently: branch, changed and new files, commits ahead ↑ and behind ↓. Amber dot means uncommitted changes. | Open the terminal there. |
+Everything fits in one view; there's nothing to scroll. Each card answers one question in a word or
+two, and the whole card is the button.
 
-The row scrolls sideways. Local cards refresh every 6 seconds; GitHub every 3 minutes.
+| Card | It tells you | Click to |
+|---|---|---|
+| **Terminal** | — | Drop the terminal down (same as Control-`). |
+| **GitHub** | Your contribution graph for the last 17 weeks, this year's total and your current streak. | — |
+| **Pull requests** | *1 review waiting*, *Checks failing*, *2 open* or *All clear*, with the pull request it means underneath. | Open that pull request. |
+| **Actions** | The run that matters most: a running one, else a failed one, else the latest. *CI running*, *CI failed*, *CI passed*. | Open that run. |
+| **Dev servers** | The first server you started (`npm run dev`, `python -m http.server` …) and how many more are running. | Open `http://localhost:<port>`. |
+| **Git** | *Changes in perch* when a project has uncommitted work, *perch ↑2 to push* when commits are waiting, else *All committed*. | Open the terminal in that project. |
+
+**Reading the colours:** an **amber outline** means it needs you (a review, uncommitted changes);
+a **red outline** means something broke (failing checks, a failed run). A dot alone is a status:
+green healthy, amber in progress. A grey card has nothing to report.
+
+Local cards refresh every 6 seconds; GitHub every 3 minutes.
 
 ### Settings → Claude
 
@@ -341,7 +348,7 @@ perch/
 │   │   ├── ClaudeFormatting.swift     "Resets in 2h 13m", "4m ago"
 │   │   └── StatusIcons.swift, ProcessingSpinner.swift, TerminalColors.swift
 │   ├── Dev/                           ← the Dev tab
-│   │   ├── DevView.swift              the cards
+│   │   ├── DevView.swift              the cards and the one-glance layout
 │   │   ├── DevStore.swift             reads dev.json, starts the helper, opens links
 │   │   └── DevSnapshot.swift          the dev.json format, shared with the helper
 │   └── …                              Boring Notch (Home tab, music, HUDs, settings)
@@ -374,7 +381,7 @@ perch/
 | Refresh GitHub more or less often | `githubInterval` in `helper/Sources/PerchHelper/Collector.swift`. |
 | Show more projects | `projectLimit` in `Collector.swift`. |
 | Change when the closed notch shows Claude | `ClaudeLiveActivity.shouldShow` in `ClaudeLiveActivity.swift`. |
-| Add a card to the Dev tab | Add a `DevCard` in `DevView.swift`, and the data it needs to `DevSnapshot.swift` and `Collector.swift`. |
+| Add a card to the Dev tab | Add a `DevTile` in `DevView.swift`, and the data it needs to `DevSnapshot.swift` and `Collector.swift`. |
 | Move the green/amber/red thresholds | `ClaudeLimitBar.tint(for:)` in `ClaudeView.swift`. |
 | Send more (or less) from Claude Code | `register.ts`; add the new fields to `ClaudeSession` too. |
 
