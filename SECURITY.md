@@ -40,6 +40,7 @@ claude plugin validate claude-mod/perch-bridge
 | **Updates** | Sparkle is never started and the update feed URL is removed, so the app cannot download or replace itself. |
 | **Telemetry** | None. |
 | **Network** | Only Boring Notch's music features: album art from your player, one LottieFiles animation, lrclib.net lyrics *if you turn lyrics on*, and `localhost` for YouTube Music. The Claude features use no network. |
+| **Library validation** | Turned off (`com.apple.security.cs.disable-library-validation`). Release builds are signed ad hoc, with no developer identity, so macOS can't confirm that the bundled frameworks (Sparkle, Lottie, MediaRemoteAdapter) come from the same developer as the app and would refuse to start it. The rest of the hardened runtime stays on. If you sign Perch with your own Apple Developer ID, you can delete this entitlement. |
 | **Inherited entitlements** | Camera (mirror), Calendars (calendar), Apple Events for Music and Spotify, network client and server. These come from Boring Notch and are used only by its Home-tab features. |
 
 ## Data at rest

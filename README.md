@@ -197,6 +197,10 @@ Perch was built to be safe to run all day next to your code. The full threat mod
 - **Runs in the macOS App Sandbox** with the hardened runtime. Its one file exception is
   read/write access to `~/Library/Application Support/Perch/`, so it can read the mod's files
   and delete old ones. It can't open the rest of your files.
+- **One hardened-runtime check is relaxed:** library validation. The release is signed without a
+  developer identity, so macOS can't match the bundled frameworks to the app and would refuse to
+  launch it otherwise. [SECURITY.md](SECURITY.md) explains this and how to remove it if you sign
+  with your own Apple Developer ID.
 - **No telemetry, no analytics, no accounts.** This was checked in Boring Notch's source and binary
   before building on it.
 - **Automatic updates are switched off.** The Boring Notch update feed is removed, so nothing can

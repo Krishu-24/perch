@@ -25,6 +25,8 @@
 		<string>com.spotify.client</string>
 		<string>com.apple.Music</string>
 	</array>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
 	<array>
 		<string>/Library/Application Support/Perch/</string>
