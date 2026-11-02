@@ -5,6 +5,9 @@
 //  The terminal that drops out of the notch. It keeps its shell running while
 //  hidden, so a toggle brings back exactly where you were.
 //
+//  It sits above the notch and the menu bar's icons, so nothing draws over it, and
+//  tells Perch when it shows and hides, so the notch stays shut underneath it.
+//
 
 import AppKit
 import SwiftTerm
@@ -19,6 +22,13 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     private static let maxSize = NSSize(width: 820, height: 480)
     private static let accent = NSColor(red: 0.85, green: 0.47, blue: 0.34, alpha: 1)  // Claude orange
 
+    /// Above Perch's notch (main menu + 3) and the menu bar's icons (status bar), below menus and alerts.
+    static let level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 4)
+
+    /// Posted to Perch, without a userInfo, so its sandbox lets them through.
+    static let didShowNotification = Notification.Name("io.github.krishu-24.perch.terminal.didShow")
+    static let didHideNotification = Notification.Name("io.github.krishu-24.perch.terminal.didHide")
+
     private var panel: TerminalPanel?
     private var terminal: LocalProcessTerminalView?
     private var titleLabel: NSTextField?
@@ -26,7 +36,11 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     private var isShellRunning = false
     private var startDirectory: String?
 
-    var isVisible: Bool { panel?.isVisible == true }
+    /// Bumped by every show, so a hide that's still animating doesn't order the panel out afterwards.
+    private var hideToken = 0
+    private var isHiding = false
+
+    var isVisible: Bool { panel?.isVisible == true && !isHiding }
 
     func toggle() {
         isVisible ? hide() : show()
@@ -49,14 +63,24 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     }
 
     func show() {
+        if isVisible, let panel {
+            // Already down: just take the keyboard back, and keep the app to return to.
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            panel.makeFirstResponder(terminal)
+            return
+        }
+        hideToken += 1
+        isHiding = false
+
         let screen = Self.notchScreen()
         if panel == nil || panel?.screen != screen { build(on: screen) }
         guard let panel, let terminal else { return }
         if !isShellRunning { startShell() }
 
         let frame = Self.frame(on: screen)
-        previousApp = NSWorkspace.shared.frontmostApplication.flatMap {
-            $0.bundleIdentifier == Bundle.main.bundleIdentifier ? nil : $0
+        if let front = NSWorkspace.shared.frontmostApplication, front.bundleIdentifier != Bundle.main.bundleIdentifier {
+            previousApp = front
         }
 
         // Drop down out of the notch: start a little higher and clear, then settle.
@@ -65,6 +89,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(terminal)
+        Self.announce(Self.didShowNotification)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -74,19 +99,29 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     }
 
     func hide() {
-        guard let panel, panel.isVisible else { return }
-        let frame = panel.frame
+        guard let panel, isVisible else { return }
+        isHiding = true
+        let token = hideToken
+        let frame = Self.frame(on: panel.screen ?? Self.notchScreen())
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().setFrame(frame.offsetBy(dx: 0, dy: 24), display: true)
             panel.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
+            // Shown again while this was animating: leave it up.
+            guard let self, self.hideToken == token else { return }
             panel.orderOut(nil)
             panel.setFrame(frame, display: false)
-            self?.previousApp?.activate()
-            self?.previousApp = nil
+            self.isHiding = false
+            self.previousApp?.activate()
+            self.previousApp = nil
+            TerminalController.announce(TerminalController.didHideNotification)
         })
+    }
+
+    private static func announce(_ name: Notification.Name) {
+        DistributedNotificationCenter.default().postNotificationName(name, object: nil, userInfo: nil, deliverImmediately: true)
     }
 
     // MARK: - Building
@@ -114,7 +149,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         let strip = Self.topStrip(of: screen)
 
         let panel = TerminalPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.level = .statusBar
+        panel.level = Self.level
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.isOpaque = false
         panel.backgroundColor = .clear

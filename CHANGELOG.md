@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.4.0 · 3 November 2026
+
+### Added
+
+- **Hover to switch tabs.** Rest the pointer on a notch tab and it switches; no click needed. The
+  menu-aim ("safe triangle") rule keeps tabs you only cross on the way down to the content from
+  switching, and the Terminal tab waits a little longer so sweeping past it never drops a terminal.
+- **A lock on the notch while your Mac is locked**, which springs open in green when you unlock. While
+  locked the notch shows only the lock and won't open. Settings → Advanced turns it off.
+
+### Changed
+
+- **Desktop widgets show up when you're on the desktop** (Finder in front, as after clicking the
+  wallpaper) and fade when you go back to an app, instead of sitting there all the time. Settings →
+  Widgets → Show widgets: *On the desktop*, *Always* or *Never*.
+
+### Fixed
+
+- **The terminal is no longer covered.** It sat beneath the notch and at the same level as the menu
+  bar's icons, so the open notch and status items drew over it. It now sits above both, the notch
+  closes when it drops, and the notch won't open underneath it while it's down.
+- Opening the terminal in a project while it was already down forgot which app to return to.
+
 ## 1.3.0 · 3 November 2026
 
 ### Added

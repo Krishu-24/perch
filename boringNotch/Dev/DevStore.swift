@@ -17,6 +17,14 @@ final class DevStore: ObservableObject {
     @Published private(set) var snapshot: DevSnapshot?
     @Published private(set) var isHelperRunning = false
     @Published private(set) var widgetSettings = WidgetSettings.load(from: ClaudeSessionStore.folder)
+    /// Whether the helper's terminal is down. The notch stays shut while it is, since the terminal covers it.
+    @Published private(set) var isTerminalVisible = false
+    /// When Perch last asked for the terminal, before the helper has said it's down.
+    private var terminalRequestedAt: Date?
+
+    /// The helper posts these, without a userInfo, as the terminal shows and hides.
+    private static let terminalDidShow = Notification.Name("io.github.krishu-24.perch.terminal.didShow")
+    private static let terminalDidHide = Notification.Name("io.github.krishu-24.perch.terminal.didHide")
 
     static let helperBundleID = "io.github.krishu-24.perch.helper"
     private static let file = ClaudeSessionStore.folder.appendingPathComponent(DevSnapshot.fileName)
@@ -34,6 +42,13 @@ final class DevStore: ObservableObject {
 
     private init() {
         reload()
+        let center = DistributedNotificationCenter.default()
+        _ = center.addObserver(forName: Self.terminalDidShow, object: nil, queue: .main) { _ in
+            Task { @MainActor in DevStore.shared.setTerminalVisible(true) }
+        }
+        _ = center.addObserver(forName: Self.terminalDidHide, object: nil, queue: .main) { _ in
+            Task { @MainActor in DevStore.shared.setTerminalVisible(false) }
+        }
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.reload() }
         }
@@ -60,11 +75,29 @@ final class DevStore: ObservableObject {
     }
 
     func toggleTerminal() {
+        terminalRequestedAt = Date()
         openHelper("perch-helper://terminal")
+    }
+
+    /// Drops the terminal down; unlike toggling, never puts it away.
+    func showTerminal() {
+        terminalRequestedAt = Date()
+        openHelper("perch-helper://terminal?show")
+    }
+
+    /// True while the terminal is down, or about to be: the notch shouldn't open beneath it.
+    var isTerminalCoveringNotch: Bool {
+        isTerminalVisible || (terminalRequestedAt.map { Date().timeIntervalSince($0) < 3 } ?? false)
+    }
+
+    private func setTerminalVisible(_ visible: Bool) {
+        terminalRequestedAt = nil
+        if visible != isTerminalVisible { isTerminalVisible = visible }
     }
 
     /// Opens the terminal in one of the listed projects.
     func openTerminal(in project: GitProject) {
+        terminalRequestedAt = Date()
         var components = URLComponents(string: "perch-helper://terminal")!
         components.queryItems = [URLQueryItem(name: "cd", value: project.path)]
         if let url = components.url { NSWorkspace.shared.open(url) }

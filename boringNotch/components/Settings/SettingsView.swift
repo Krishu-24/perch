@@ -1490,6 +1490,9 @@ struct Advanced: View {
                 Defaults.Toggle(key: .hideTitleBar) {
                     Text("Hide title bar")
                 }
+                Defaults.Toggle(key: .showLockIcon) {
+                    Text("Show a lock on the notch when your Mac is locked")
+                }
                 Defaults.Toggle(key: .showOnLockScreen) {
                     Text("Show notch on lock screen")
                 }

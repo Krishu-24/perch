@@ -24,6 +24,9 @@ struct ContentView: View {
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
     @ObservedObject var claude = ClaudeSessionStore.shared
+    @ObservedObject var dev = DevStore.shared
+    @ObservedObject var lock = LockStatus.shared
+    @Default(.showLockIcon) var showLockIcon
     @Default(.claudeLiveActivity) var claudeLiveActivity
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
@@ -59,10 +62,15 @@ struct ContentView: View {
         )
     }
 
+    /// While the Mac is locked, and for a moment after, the closed notch shows only the lock.
+    private var showLockActivity: Bool {
+        showLockIcon && lock.isShowing && vm.notchState == .closed
+    }
+
     /// The closed notch shows Claude or what's playing, whichever you aren't looking at;
     /// ClaudeLiveActivity.shouldShow has the rules.
     private var showClaudeActivity: Bool {
-        claudeLiveActivity && vm.notchState == .closed && !vm.hideOnClosed && !coordinator.expandingView.show
+        claudeLiveActivity && !showLockActivity && vm.notchState == .closed && !vm.hideOnClosed && !coordinator.expandingView.show
             && ClaudeLiveActivity.shouldShow(
                 needsYou: claude.needsYouCount,
                 working: claude.workingCount,
@@ -75,7 +83,9 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
-        if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+        if showLockActivity {
+            chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
+        } else if coordinator.expandingView.type == .battery && coordinator.expandingView.show
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
             chinWidth = 640
@@ -238,6 +248,13 @@ struct ContentView: View {
         )
         .animation(.smooth, value: gestureProgress)
         .environmentObject(vm)
+        .onChange(of: dev.isTerminalVisible) { _, visible in
+            // The terminal drops over the notch; shut the notch so nothing is left on top or behind.
+            guard visible, vm.notchState == .open else { return }
+            hoverTask?.cancel()
+            withAnimation(animationSpring) { isHovering = false }
+            vm.close()
+        }
         .onChange(of: claude.needsYouCount) { previous, current in
             // Opt-in: open on the Claude tab when a session starts waiting for you.
             guard current > previous, Defaults[.claudeOpenWhenNeeded], vm.notchState == .closed else { return }
@@ -261,7 +278,14 @@ struct ContentView: View {
                     .padding(.top, 40)
                     Spacer()
                 } else {
-                    if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+                    if showLockActivity {
+                        LockLiveActivity(
+                            isLocked: lock.isLocked,
+                            notchHeight: vm.effectiveClosedNotchHeight,
+                            notchWidth: vm.closedNotchSize.width - cornerRadiusInsets.closed.top
+                        )
+                        .transition(.opacity)
+                    } else if coordinator.expandingView.type == .battery && coordinator.expandingView.show
                         && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
                     {
                         HStack(spacing: 0) {
@@ -504,6 +528,10 @@ struct ContentView: View {
     }
 
     private func doOpen() {
+        // The terminal covers the notch while it's down; opening underneath it would only get in the way.
+        guard !dev.isTerminalCoveringNotch else { return }
+        // Locked: the notch is only there for its lock, unless you asked for all of it on the lock screen.
+        guard !lock.isLocked || Defaults[.showOnLockScreen] else { return }
         withAnimation(animationSpring) {
             vm.open()
         }

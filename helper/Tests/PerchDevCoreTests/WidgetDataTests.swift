@@ -42,11 +42,25 @@ final class WidgetDataTests: XCTestCase {
         XCTAssertEqual(status.working, 0)
     }
 
-    func testWidgetSettingsDefaultToShownTopRight() throws {
-        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(showDesktopWidgets: true, position: .topRight))
-        try write(#"{"showDesktopWidgets":false,"position":"bottomLeft"}"#, to: WidgetSettings.fileName)
-        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(showDesktopWidgets: false, position: .bottomLeft))
+    func testWidgetSettingsDefaultToTheDesktopTopRight() throws {
+        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(visibility: .onDesktop, position: .topRight))
+        try write(#"{"visibility":"always","position":"bottomLeft"}"#, to: WidgetSettings.fileName)
+        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(visibility: .always, position: .bottomLeft))
         try write("not json", to: WidgetSettings.fileName)
         XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(), "a broken file falls back to the defaults")
+    }
+
+    func testWidgetSettingsReadTheOldSwitch() throws {
+        try write(#"{"showDesktopWidgets":false,"position":"bottomLeft"}"#, to: WidgetSettings.fileName)
+        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(visibility: .off, position: .bottomLeft))
+        try write(#"{"showDesktopWidgets":true,"position":"topLeft"}"#, to: WidgetSettings.fileName)
+        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(visibility: .onDesktop, position: .topLeft),
+                       "widgets that were always on now wait for the desktop")
+    }
+
+    func testWidgetSettingsRoundTrip() throws {
+        let settings = WidgetSettings(visibility: .off, position: .bottomRight)
+        let decoded = try JSONDecoder().decode(WidgetSettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(decoded, settings)
     }
 }
