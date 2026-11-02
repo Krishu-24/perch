@@ -34,8 +34,8 @@ without leaving what you're working on.
 
 ## What Perch does
 
-Perch is a notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch),
-with Claude added. Hover over the notch and you get two tabs: **Home** (music, calendar, battery,
+Perch is an independent notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch),
+with Claude added. It is not made by Anthropic or The Bored Team. Hover over the notch and you get two tabs: **Home** (music, calendar, battery,
 webcam mirror, all from Boring Notch) and **Claude**.
 
 | | Feature | What you see |
@@ -400,4 +400,12 @@ In plain words:
 - ✅ Share your own modified version with anyone.
 - 📌 If you share a version, share its source code under GPL-3.0 too, and keep the credits.
 
-See [CHANGELOG.md](CHANGELOG.md) for what's new.
+**Modification notice:** Perch is a modified version of Boring Notch 2.7.3, changed starting
+3 November 2026. [CHANGELOG.md](CHANGELOG.md) lists what was added, removed and changed, and the
+git history shows every change in detail.
+
+> [!NOTE]
+> Perch is an independent project. It is not affiliated with, endorsed by or supported by
+> Anthropic or The Bored Team. "Claude" and "Claude Code" are trademarks of Anthropic, and
+> "Boring Notch" belongs to The Bored Team; they are used here only to say what Perch works with
+> and where it comes from.
