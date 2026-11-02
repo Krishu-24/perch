@@ -23,6 +23,8 @@ struct ContentView: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
+    @ObservedObject var claude = ClaudeSessionStore.shared
+    @Default(.claudeLiveActivity) var claudeLiveActivity
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
 
@@ -57,6 +59,13 @@ struct ContentView: View {
         )
     }
 
+    /// Claude's activity takes the closed notch when a session needs you, and
+    /// while one works as long as no music is playing.
+    private var showClaudeActivity: Bool {
+        claudeLiveActivity && vm.notchState == .closed && !vm.hideOnClosed && !coordinator.expandingView.show
+            && (claude.needsYouCount > 0 || (claude.workingCount > 0 && !musicManager.isPlaying))
+    }
+
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
@@ -64,6 +73,8 @@ struct ContentView: View {
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
             chinWidth = 640
+        } else if showClaudeActivity {
+            chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music)
             && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
             && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
@@ -221,6 +232,12 @@ struct ContentView: View {
         )
         .animation(.smooth, value: gestureProgress)
         .environmentObject(vm)
+        .onChange(of: claude.needsYouCount) { previous, current in
+            // Opt-in: open on the Claude tab when a session starts waiting for you.
+            guard current > previous, Defaults[.claudeOpenWhenNeeded], vm.notchState == .closed else { return }
+            coordinator.currentView = .claude
+            doOpen()
+        }
     }
 
     @ViewBuilder
@@ -268,6 +285,15 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
+                      } else if showClaudeActivity {
+                          ClaudeLiveActivity(
+                              needsYouCount: claude.needsYouCount,
+                              workingCount: claude.workingCount,
+                              fiveHour: claude.usage?.fiveHour,
+                              notchHeight: vm.effectiveClosedNotchHeight,
+                              notchWidth: vm.closedNotchSize.width - cornerRadiusInsets.closed.top
+                          )
+                          .transition(.opacity)
                       } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed {
                           MusicLiveActivity()
                               .frame(alignment: .center)

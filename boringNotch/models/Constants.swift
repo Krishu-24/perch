@@ -159,6 +159,10 @@ extension Defaults.Keys {
     // Option key modifier behaviour for media keys
     static let optionKeyAction = Key<OptionKeyAction>("optionKeyAction", default: OptionKeyAction.openSettings)
     
+    // MARK: Claude
+    static let claudeLiveActivity = Key<Bool>("claudeLiveActivity", default: true)
+    static let claudeOpenWhenNeeded = Key<Bool>("claudeOpenWhenNeeded", default: false)
+
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
     static let hideAllDayEvents = Key<Bool>("hideAllDayEvents", default: false)

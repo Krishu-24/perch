@@ -14,8 +14,27 @@ struct ClaudeView: View {
     @ObservedObject var store = ClaudeSessionStore.shared
 
     var body: some View {
+        ClaudeTabContent(
+            sessions: store.sessions,
+            usage: store.usage,
+            isConnected: store.isConnected,
+            onOpen: store.open
+        )
+    }
+}
+
+/// The tab drawn from plain values, so previews and the snapshot script can render it.
+struct ClaudeTabContent: View {
+    let sessions: [ClaudeSession]
+    let usage: ClaudeUsageSnapshot?
+    let isConnected: Bool
+    let onOpen: (ClaudeSession) -> Void
+    /// Off only for snapshots: ImageRenderer draws a ScrollView's content blank.
+    var isScrollable = true
+
+    var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            ClaudeLimitsPanel(usage: store.usage, isConnected: store.isConnected)
+            ClaudeLimitsPanel(usage: usage, isConnected: isConnected)
                 .frame(width: 168)
             sessionsPanel
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -25,25 +44,33 @@ struct ClaudeView: View {
 
     @ViewBuilder
     private var sessionsPanel: some View {
-        if !store.isConnected {
+        if !isConnected {
             ClaudeEmptyState(
                 title: "Claude isn't connected yet",
                 detail: "Install the notch-bridge mod in Claude Code. The README in this project has the two steps."
             )
-        } else if store.sessions.isEmpty {
+        } else if sessions.isEmpty {
             ClaudeEmptyState(
                 title: "No active sessions",
                 detail: "Start a chat in Claude Code and it shows up here."
             )
         } else {
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: 2) {
-                    ForEach(store.sessions) { session in
-                        ClaudeSessionRow(session: session) { store.open(session) }
-                    }
+            if isScrollable {
+                ScrollView(.vertical, showsIndicators: false) {
+                    sessionRows
                 }
+                .scrollBounceBehavior(.basedOnSize)
+            } else {
+                sessionRows
             }
-            .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+
+    private var sessionRows: some View {
+        LazyVStack(spacing: 2) {
+            ForEach(sessions) { session in
+                ClaudeSessionRow(session: session) { onOpen(session) }
+            }
         }
     }
 }
@@ -65,9 +92,11 @@ struct ClaudeLimitsPanel: View {
             ClaudeLimitBar(label: "Weekly", window: usage?.sevenDay)
 
             if let cachedAt = usage?.cachedAt {
-                Text("Updated \(cachedAt, style: .relative) ago")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.3))
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text("Updated \(ClaudeFormatting.ageText(cachedAt, now: context.date))")
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.3))
+                }
             } else if isConnected {
                 Text("Shows after your next Claude reply")
                     .font(.system(size: 10))
@@ -86,13 +115,15 @@ struct ClaudeLimitBar: View {
     }
 
     /// Green while there is room, amber past 70%, red past 90%.
-    private var tint: Color {
-        switch window?.usedPercentage ?? 0 {
+    static func tint(for usedPercentage: Double) -> Color {
+        switch usedPercentage {
         case ..<70: TerminalColors.green
         case ..<90: TerminalColors.amber
         default: TerminalColors.red
         }
     }
+
+    private var tint: Color { Self.tint(for: window?.usedPercentage ?? 0) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -112,10 +143,12 @@ struct ClaudeLimitBar: View {
                 }
             }
             .frame(height: 5)
-            if let resetsAt = window?.resetsAt, resetsAt > Date() {
-                Text("Resets \(resetsAt, style: .relative)")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.35))
+            if let resetsAt = window?.resetsAt {
+                TimelineView(.periodic(from: .now, by: 30)) { context in
+                    Text(ClaudeFormatting.resetText(resetsAt, now: context.date))
+                        .font(.system(size: 10))
+                        .foregroundColor(.white.opacity(0.35))
+                }
             }
         }
     }
@@ -171,7 +204,7 @@ struct ClaudeSessionRow: View {
             stateIndicator
                 .frame(width: 14)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(session.projectName)
                         .font(.system(size: 13, weight: .medium))
@@ -191,24 +224,44 @@ struct ClaudeSessionRow: View {
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.4))
                         .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             }
 
             Spacer(minLength: 0)
 
-            ClaudeIconButton(icon: "arrow.up.forward.app", action: onOpen)
-                .help("Open the app this session runs in")
+            trailing
+                .frame(minWidth: 24, alignment: .trailing)
         }
         .padding(.leading, 8)
-        .padding(.trailing, 10)
-        .padding(.vertical, 8)
+        .padding(.trailing, 6)
+        .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onTapGesture(perform: onOpen)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isHovered ? Color.white.opacity(0.06) : Color.clear)
+            RoundedRectangle(cornerRadius: 10)
+                .fill(rowFill)
         )
         .onHover { isHovered = $0 }
+        .help("Open the app this session runs in")
+    }
+
+    private var rowFill: Color {
+        if isHovered { return Color.white.opacity(0.07) }
+        return session.status == .needsYou ? TerminalColors.amber.opacity(0.08) : .clear
+    }
+
+    @ViewBuilder
+    private var trailing: some View {
+        if isHovered {
+            ClaudeIconButton(icon: "arrow.up.forward.app", action: onOpen)
+        } else if session.status == .done {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                Text(ClaudeFormatting.ageText(session.updated, now: context.date))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.white.opacity(0.3))
+            }
+        }
     }
 
     @ViewBuilder
@@ -217,7 +270,9 @@ struct ClaudeSessionRow: View {
         case .working:
             ProcessingSpinner()
         case .needsYou:
-            StatusIcon(status: .needsYou, size: 12)
+            Image(systemName: "hand.raised.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(TerminalColors.amber)
         case .done:
             Circle()
                 .fill(TerminalColors.green)

@@ -5,6 +5,10 @@ This branch (`claude-tab`, based on Boring Notch v2.7.3) adds a **Claude** tab t
 - your Claude plan limits, five-hour and weekly, with reset times
 - every running Claude Code session: working, needs you (waiting for approval), or your turn
 - click a session to bring its app (Claude desktop or your terminal) to the front
+- on the closed notch: Claude's spark while a session works, an amber hand when one needs you
+  (even over music), and your five-hour usage on the right
+- a Claude page in Settings: turn the closed-notch activity on or off, open the notch on the
+  Claude tab when a session needs you (off by default), and see whether the mod is connected
 
 It works for sessions in the Claude desktop app's Code tab as well as in a terminal.
 
@@ -36,6 +40,15 @@ Claude Code ── notch-bridge mod ──► ~/Library/Application Support/Bori
    `claude-mod/notch-bridge` reach a running session with `/reload-plugins`.
 
 To remove the mod: `claude plugin uninstall notch-bridge@boring-notch-claude`.
+
+## Tests and snapshots
+
+- `scripts/claude-tests/run.sh` runs the tab's logic tests (time strings, the limits file, which
+  sessions show and in what order) and then the mod's tests through `claude plugin test`. If
+  `claude` is not on your PATH, set `CLAUDE_CLI` to the Claude Code binary.
+- `scripts/claude-tab-snapshots/render.sh` renders the tab and the closed-notch activity with
+  sample data to `build/claude-snapshots/*.png`, so a layout change can be checked without
+  opening the notch.
 
 ## Differences from stock Boring Notch
 

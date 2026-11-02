@@ -80,11 +80,11 @@ final class ClaudeSessionStore: ObservableObject {
     private static let limitsFile = folder.appendingPathComponent("limits.json")
 
     /// A finished or idle session drops off the list after this long.
-    private static let quietTimeout: TimeInterval = 30 * 60
+    nonisolated private static let quietTimeout: TimeInterval = 30 * 60
     /// A session still marked working or waiting with no news for this long is hidden.
-    private static let staleTimeout: TimeInterval = 2 * 60 * 60
+    nonisolated private static let staleTimeout: TimeInterval = 2 * 60 * 60
     /// Files of sessions that ended or went quiet are deleted after this long.
-    private static let cleanupAge: TimeInterval = 24 * 60 * 60
+    nonisolated private static let cleanupAge: TimeInterval = 24 * 60 * 60
 
     private var timer: Timer?
 
@@ -99,7 +99,7 @@ final class ClaudeSessionStore: ObservableObject {
     }
 
     func reload() {
-        let snapshot = Self.readSessions()
+        let snapshot = Self.readSessions(in: Self.sessionsFolder)
         if snapshot != sessions { sessions = snapshot }
 
         let limits = ClaudeUsageLoader.load(from: Self.limitsFile)
@@ -127,13 +127,13 @@ final class ClaudeSessionStore: ObservableObject {
         }
     }
 
-    private static func readSessions() -> [ClaudeSession] {
+    /// The sessions worth showing, needs-you first; deletes files too old to matter.
+    nonisolated static func readSessions(in sessionsFolder: URL, now: Date = Date()) -> [ClaudeSession] {
         let fm = FileManager.default
         guard let files = try? fm.contentsOfDirectory(at: sessionsFolder, includingPropertiesForKeys: nil) else {
             return []
         }
 
-        let now = Date()
         let decoder = JSONDecoder()
         var result: [ClaudeSession] = []
 
