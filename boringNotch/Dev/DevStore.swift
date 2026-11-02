@@ -25,6 +25,15 @@ final class DevStore: ObservableObject {
     /// The helper posts these, without a userInfo, as the terminal shows and hides.
     private static let terminalDidShow = Notification.Name("io.github.krishu-24.perch.terminal.didShow")
     private static let terminalDidHide = Notification.Name("io.github.krishu-24.perch.terminal.didHide")
+    /// The terminal's own row of tabs asks for one; the object is its name ("home", "limits", "claude", "dev").
+    private static let openTab = Notification.Name("io.github.krishu-24.perch.openTab")
+
+    /// A tab the terminal asked the notch to open, once it had put itself away.
+    struct TabRequest: Equatable {
+        let name: String
+        let id = UUID()
+    }
+    @Published private(set) var tabRequest: TabRequest?
 
     static let helperBundleID = "io.github.krishu-24.perch.helper"
     private static let file = ClaudeSessionStore.folder.appendingPathComponent(DevSnapshot.fileName)
@@ -48,6 +57,10 @@ final class DevStore: ObservableObject {
         }
         _ = center.addObserver(forName: Self.terminalDidHide, object: nil, queue: .main) { _ in
             Task { @MainActor in DevStore.shared.setTerminalVisible(false) }
+        }
+        _ = center.addObserver(forName: Self.openTab, object: nil, queue: .main) { notification in
+            guard let name = notification.object as? String else { return }
+            Task { @MainActor in DevStore.shared.requestTab(name) }
         }
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.reload() }
@@ -88,6 +101,12 @@ final class DevStore: ObservableObject {
     /// True while the terminal is down, or about to be: the notch shouldn't open beneath it.
     var isTerminalCoveringNotch: Bool {
         isTerminalVisible || (terminalRequestedAt.map { Date().timeIntervalSince($0) < 3 } ?? false)
+    }
+
+    private func requestTab(_ name: String) {
+        // The terminal has gone by the time it asks, whichever notification arrives first.
+        setTerminalVisible(false)
+        tabRequest = TabRequest(name: name)
     }
 
     private func setTerminalVisible(_ visible: Bool) {

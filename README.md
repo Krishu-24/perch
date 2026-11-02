@@ -248,6 +248,10 @@ Rest the pointer on a tab and it switches; clicking still works too. Perch uses 
   anywhere else, hides it.
 - It sits above the notch and the menu bar's icons, so nothing overlaps it, and the notch stays shut
   underneath it while it's down.
+- **The other tabs stay in reach.** The notch's tabs sit along the terminal's top edge, left of the
+  notch, where the open notch shows them. Rest on one (or click it) and the terminal goes away and the
+  notch opens on that tab. They wait for the pointer to move first, so the terminal never closes just
+  because it dropped under a resting pointer.
 - It's your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
 - Hiding doesn't stop anything: a running command keeps going, and you come back to the same place.
 - Typing `exit` closes it; the next Control-` starts a fresh shell.

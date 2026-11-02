@@ -22,6 +22,8 @@
   bar's icons, so the open notch and status items drew over it. It now sits above both, the notch
   closes when it drops, and the notch won't open underneath it while it's down.
 - Opening the terminal in a project while it was already down forgot which app to return to.
+- **The other tabs stay in reach from the terminal.** Its top strip shows the notch's tabs where the
+  open notch has them; resting on one puts the terminal away and opens the notch on that tab.
 
 ## 1.3.0 · 3 November 2026
 

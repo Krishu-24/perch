@@ -28,10 +28,13 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     /// Posted to Perch, without a userInfo, so its sandbox lets them through.
     static let didShowNotification = Notification.Name("io.github.krishu-24.perch.terminal.didShow")
     static let didHideNotification = Notification.Name("io.github.krishu-24.perch.terminal.didHide")
+    /// Asks Perch to open the notch on a tab; the object is the tab's name ("home", "limits", "claude", "dev").
+    static let openTabNotification = Notification.Name("io.github.krishu-24.perch.openTab")
 
     private var panel: TerminalPanel?
     private var terminal: LocalProcessTerminalView?
     private var titleLabel: NSTextField?
+    private var tabStrip: TerminalTabStrip?
     private var previousApp: NSRunningApplication?
     private var isShellRunning = false
     private var startDirectory: String?
@@ -89,6 +92,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(terminal)
+        tabStrip?.arm()
         Self.announce(Self.didShowNotification)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
@@ -98,7 +102,15 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         }
     }
 
-    func hide() {
+    /// Puts the terminal away and opens the notch on another tab, from the tabs along its top strip.
+    private func switchToTab(_ name: String) {
+        hide {
+            DistributedNotificationCenter.default().postNotificationName(
+                TerminalController.openTabNotification, object: name, userInfo: nil, deliverImmediately: true)
+        }
+    }
+
+    func hide(then completion: (() -> Void)? = nil) {
         guard let panel, isVisible else { return }
         isHiding = true
         let token = hideToken
@@ -117,6 +129,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
             self.previousApp?.activate()
             self.previousApp = nil
             TerminalController.announce(TerminalController.didHideNotification)
+            completion?()
         })
     }
 
@@ -135,6 +148,17 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
     private static func topStrip(of screen: NSScreen) -> CGFloat {
         let notch = screen.safeAreaInsets.top
         return notch > 0 ? notch : max(24, screen.frame.maxY - screen.visibleFrame.maxY)
+    }
+
+    /// The notch's left and right edges in the panel's coordinates; a 200-point gap on Macs without one.
+    private static func notchEdges(on screen: NSScreen, panelWidth: CGFloat) -> (left: CGFloat, right: CGFloat) {
+        let offset = (screen.frame.width - panelWidth) / 2
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea,
+           left.width > 0, right.width > 0, left.width + right.width < screen.frame.width {
+            // Each area runs from the screen's edge to the notch's.
+            return (left.width - offset, screen.frame.width - right.width - offset)
+        }
+        return (panelWidth / 2 - 100, panelWidth / 2 + 100)
     }
 
     private static func frame(on screen: NSScreen) -> NSRect {
@@ -157,6 +181,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         panel.isMovable = false
         panel.hidesOnDeactivate = false
         panel.delegate = self
+        panel.acceptsMouseMovedEvents = true
 
         // Black like the notch, square at the top, rounded at the bottom.
         let content = NSView(frame: NSRect(origin: .zero, size: frame.size))
@@ -167,10 +192,25 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         content.layer?.masksToBounds = true
         panel.contentView = content
 
-        // The strip beside the notch holds the title on the left and the shortcut on the right.
+        // The strip beside the notch: the notch's tabs on the left, where the open notch shows
+        // them, and the title and shortcut on the right.
+        let notch = Self.notchEdges(on: screen, panelWidth: frame.width)
+        let tabsX = max(16, notch.left - 10 - TerminalTabStrip.width)
+        // The terminal below spans the whole panel; in the strip's coordinates that starts left of it.
+        let tabs = TerminalTabStrip(
+            frame: NSRect(x: tabsX, y: frame.height - strip, width: TerminalTabStrip.width, height: strip),
+            contentMinX: -tabsX, contentMaxX: frame.width - tabsX)
+        tabs.autoresizingMask = [.minYMargin]
+        tabs.onSelect = { [weak self] name in self?.switchToTab(name) }
+        content.addSubview(tabs)
+        tabStrip = tabs
+
+        let hintWidth: CGFloat = 76
+        let rightStart = notch.right + 18
         let title = Self.label(size: 11, color: NSColor(white: 1, alpha: 0.55))
         title.stringValue = "Terminal"
-        title.frame = NSRect(x: 22, y: frame.height - strip + (strip - 16) / 2, width: frame.width / 2 - 140, height: 16)
+        title.frame = NSRect(x: rightStart, y: frame.height - strip + (strip - 16) / 2,
+                             width: max(40, frame.width - 22 - hintWidth - 8 - rightStart), height: 16)
         title.autoresizingMask = [.minYMargin]
         content.addSubview(title)
         titleLabel = title
@@ -178,7 +218,7 @@ final class TerminalController: NSObject, NSWindowDelegate, LocalProcessTerminal
         let hint = Self.label(size: 11, color: NSColor(white: 1, alpha: 0.3))
         hint.stringValue = "⌃` to hide"
         hint.alignment = .right
-        hint.frame = NSRect(x: frame.width / 2 + 118, y: title.frame.minY, width: frame.width / 2 - 140, height: 16)
+        hint.frame = NSRect(x: frame.width - 22 - hintWidth, y: title.frame.minY, width: hintWidth, height: 16)
         hint.autoresizingMask = [.minXMargin, .minYMargin]
         content.addSubview(hint)
 

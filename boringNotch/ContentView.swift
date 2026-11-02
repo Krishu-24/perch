@@ -255,6 +255,14 @@ struct ContentView: View {
             withAnimation(animationSpring) { isHovering = false }
             vm.close()
         }
+        .onChange(of: dev.tabRequest) { _, request in
+            // A tab picked from the terminal's top strip: open the notch on it.
+            guard let request else { return }
+            let views: [String: NotchViews] = ["home": .home, "limits": .limits, "claude": .claude, "dev": .dev]
+            guard let view = views[request.name] else { return }
+            coordinator.currentView = view
+            doOpen()
+        }
         .onChange(of: claude.needsYouCount) { previous, current in
             // Opt-in: open on the Claude tab when a session starts waiting for you.
             guard current > previous, Defaults[.claudeOpenWhenNeeded], vm.notchState == .closed else { return }
