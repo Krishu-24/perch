@@ -2,68 +2,30 @@
 //  TerminalPanel.swift
 //  PerchHelper
 //
-//  The drop-down that comes out of the notch: one panel with two tabs, Terminal and
-//  Widgets, chosen in the strip beside the notch. Both stay alive while you switch,
-//  and the shell keeps running while the panel is hidden, so a toggle brings back
+//  The drop-down that comes out of the notch. Its top strip carries the notch's tabs
+//  plus Widgets: Terminal and Widgets switch inside the drop-down, and the notch's own
+//  tabs put it away and open the notch on that tab. Both of its tabs stay alive while
+//  you switch, and the shell keeps running while it's hidden, so a toggle brings back
 //  exactly where you were.
+//
+//  It sits above the notch and the menu bar's icons, so nothing draws over it, and
+//  tells Perch when it shows and hides, so the notch stays shut underneath it.
 //
 
 import AppKit
-import PerchDevCore
 import PerchWidgets
 import SwiftTerm
 import SwiftUI
 
 /// A borderless panel that can still take the keyboard.
-final class DropdownPanel: NSPanel {
+final class TerminalPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 }
 
-enum DropdownTab: String, CaseIterable {
+/// What the drop-down shows. Each matches a tab in its strip.
+enum DropdownTab: String {
     case terminal, widgets
-
-    var title: String { self == .terminal ? "Terminal" : "Widgets" }
-    var icon: String { self == .terminal ? "apple.terminal.fill" : "square.grid.2x2.fill" }
-}
-
-/// What the strip shows: the selected tab, and the shell's folder for the terminal.
-final class DropdownState: ObservableObject {
-    @Published var tab: DropdownTab = .terminal
-    @Published var title = "~"
-}
-
-/// The tabs, drawn in the strip to the left of the notch.
-struct DropdownStrip: View {
-    @ObservedObject var state: DropdownState
-    let select: (DropdownTab) -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 2) {
-                ForEach(DropdownTab.allCases, id: \.self) { tab in
-                    Button { select(tab) } label: {
-                        Label(tab.title, systemImage: tab.icon)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(state.tab == tab ? .white : .white.opacity(0.45))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.white.opacity(state.tab == tab ? 0.14 : 0)))
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            if state.tab == .terminal {
-                Text(state.title)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.white.opacity(0.4))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
-        }
-    }
 }
 
 /// The widget board, shrunk to fit if the screen is small.
@@ -79,39 +41,56 @@ struct DropdownWidgets: View {
     }
 }
 
-/// Takes the first click, so a tab or widget responds straight away.
+/// Takes the first click, so a widget responds straight away.
 private final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminalViewDelegate {
     private static let accent = NSColor(red: 0.85, green: 0.47, blue: 0.34, alpha: 1)  // Claude orange
-    /// Space around the content below the strip.
+    /// Space around the terminal and the widgets, below the strip.
     private static let inset = NSEdgeInsets(top: 8, left: 16, bottom: 16, right: 16)
 
+    /// Above Perch's notch (main menu + 3) and the menu bar's icons (status bar), below menus and alerts.
+    static let level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 4)
+
+    /// Posted to Perch, without a userInfo, so its sandbox lets them through.
+    static let didShowNotification = Notification.Name("io.github.krishu-24.perch.terminal.didShow")
+    static let didHideNotification = Notification.Name("io.github.krishu-24.perch.terminal.didHide")
+    /// Asks Perch to open the notch on a tab; the object is the tab's name ("home", "limits", "claude", "dev").
+    static let openTabNotification = Notification.Name("io.github.krishu-24.perch.openTab")
+
     let widgets: WidgetModel
-    private let state = DropdownState()
-    private var panel: DropdownPanel?
+    private var panel: TerminalPanel?
     private var terminal: LocalProcessTerminalView?
     private var widgetView: NSView?
+    private var titleLabel: NSTextField?
+    private var tabStrip: TerminalTabStrip?
     private var previousApp: NSRunningApplication?
     private var isShellRunning = false
     private var startDirectory: String?
+    /// The tab showing now, and the one Control-` comes back to.
+    private var tab: DropdownTab = .terminal
+    private var terminalTitle = "Terminal"
 
-    var isVisible: Bool { panel?.isVisible == true }
+    /// Bumped by every show, so a hide that's still animating doesn't order the panel out afterwards.
+    private var hideToken = 0
+    private var isHiding = false
+
+    var isVisible: Bool { panel?.isVisible == true && !isHiding }
 
     init(widgets: WidgetModel) {
         self.widgets = widgets
     }
 
-    /// Control-`: shows the drop-down on the tab you used last, or hides it.
+    /// Control-`: shows the drop-down on the tab you used last, or puts it away.
     func toggle() {
-        isVisible ? hide() : show(state.tab)
+        isVisible ? hide() : show(tab)
     }
 
-    /// Shows the drop-down on `tab`; if it's already showing that tab, hides it.
+    /// Shows the drop-down on `tab`; if it's already showing that tab, puts it away.
     func toggle(_ tab: DropdownTab) {
-        if isVisible && state.tab == tab { hide() } else { show(tab) }
+        if isVisible && self.tab == tab { hide() } else { show(tab) }
     }
 
     /// Shows the terminal in `directory`: a fresh shell starts there, a running one is sent `cd`.
@@ -131,15 +110,23 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
     }
 
     func show(_ tab: DropdownTab) {
+        if isVisible, let panel {
+            // Already down: switch tabs, take the keyboard back, and keep the app to return to.
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            select(tab)
+            return
+        }
+        hideToken += 1
+        isHiding = false
+
         let screen = Self.notchScreen()
         if panel == nil || panel?.screen != screen { build(on: screen) }
         guard let panel else { return }
-        select(tab)
-        guard !panel.isVisible else { return }
 
         let frame = Self.frame(on: screen)
-        previousApp = NSWorkspace.shared.frontmostApplication.flatMap {
-            $0.bundleIdentifier == Bundle.main.bundleIdentifier ? nil : $0
+        if let front = NSWorkspace.shared.frontmostApplication, front.bundleIdentifier != Bundle.main.bundleIdentifier {
+            previousApp = front
         }
 
         // Drop down out of the notch: start a little higher and clear, then settle.
@@ -147,7 +134,9 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         panel.alphaValue = 0
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
-        if tab == .terminal, let terminal { panel.makeFirstResponder(terminal) }
+        select(tab)
+        tabStrip?.arm()
+        Self.announce(Self.didShowNotification)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -156,33 +145,59 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         }
     }
 
-    func hide() {
-        guard let panel, panel.isVisible else { return }
-        let frame = panel.frame
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            panel.animator().setFrame(frame.offsetBy(dx: 0, dy: 24), display: true)
-            panel.animator().alphaValue = 0
-        }, completionHandler: { [weak self] in
-            panel.orderOut(nil)
-            panel.setFrame(frame, display: false)
-            self?.previousApp?.activate()
-            self?.previousApp = nil
-        })
-    }
-
-    /// Switches tabs; the other one stays as it was.
+    /// Switches between Terminal and Widgets; the other keeps its state.
     private func select(_ tab: DropdownTab) {
-        state.tab = tab
+        self.tab = tab
         terminal?.isHidden = tab != .terminal
         widgetView?.isHidden = tab != .widgets
+        tabStrip?.setCurrent(tab.rawValue)
+        titleLabel?.stringValue = tab == .terminal ? terminalTitle : "Widgets"
         if tab == .terminal {
             if !isShellRunning { startShell() }
             if let terminal { panel?.makeFirstResponder(terminal) }
         } else {
             panel?.makeFirstResponder(nil)
         }
+    }
+
+    /// From the strip: Terminal and Widgets switch here; the notch's other tabs put the
+    /// drop-down away and open the notch on that tab.
+    private func pick(_ name: String) {
+        if let tab = DropdownTab(rawValue: name) {
+            select(tab)
+        } else {
+            hide {
+                DistributedNotificationCenter.default().postNotificationName(
+                    DropdownController.openTabNotification, object: name, userInfo: nil, deliverImmediately: true)
+            }
+        }
+    }
+
+    func hide(then completion: (() -> Void)? = nil) {
+        guard let panel, isVisible else { return }
+        isHiding = true
+        let token = hideToken
+        let frame = Self.frame(on: panel.screen ?? Self.notchScreen())
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().setFrame(frame.offsetBy(dx: 0, dy: 24), display: true)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            // Shown again while this was animating: leave it up.
+            guard let self, self.hideToken == token else { return }
+            panel.orderOut(nil)
+            panel.setFrame(frame, display: false)
+            self.isHiding = false
+            self.previousApp?.activate()
+            self.previousApp = nil
+            DropdownController.announce(DropdownController.didHideNotification)
+            completion?()
+        })
+    }
+
+    private static func announce(_ name: Notification.Name) {
+        DistributedNotificationCenter.default().postNotificationName(name, object: nil, userInfo: nil, deliverImmediately: true)
     }
 
     // MARK: - Building
@@ -198,10 +213,15 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         return notch > 0 ? notch : max(24, screen.frame.maxY - screen.visibleFrame.maxY)
     }
 
-    /// Width of the notch itself, so the tabs stay clear of it.
-    private static func notchWidth(of screen: NSScreen) -> CGFloat {
-        guard let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea else { return 0 }
-        return max(0, screen.frame.width - left.width - right.width)
+    /// The notch's left and right edges in the panel's coordinates; a 200-point gap on Macs without one.
+    private static func notchEdges(on screen: NSScreen, panelWidth: CGFloat) -> (left: CGFloat, right: CGFloat) {
+        let offset = (screen.frame.width - panelWidth) / 2
+        if let left = screen.auxiliaryTopLeftArea, let right = screen.auxiliaryTopRightArea,
+           left.width > 0, right.width > 0, left.width + right.width < screen.frame.width {
+            // Each area runs from the screen's edge to the notch's.
+            return (left.width - offset, screen.frame.width - right.width - offset)
+        }
+        return (panelWidth / 2 - 100, panelWidth / 2 + 100)
     }
 
     /// Big enough for the widget board at full size, but never more than about 70% of the screen.
@@ -218,11 +238,9 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         panel?.orderOut(nil)
         let frame = Self.frame(on: screen)
         let strip = Self.topStrip(of: screen)
-        let notch = Self.notchWidth(of: screen)
 
-        let panel = DropdownPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        // Above Perch's notch panel (main menu + 3), so the notch never opens on top of it.
-        panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 4)
+        let panel = TerminalPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.level = Self.level
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -230,6 +248,7 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         panel.isMovable = false
         panel.hidesOnDeactivate = false
         panel.delegate = self
+        panel.acceptsMouseMovedEvents = true
 
         // Black like the notch, square at the top, rounded at the bottom.
         let content = NSView(frame: NSRect(origin: .zero, size: frame.size))
@@ -240,18 +259,33 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         content.layer?.masksToBounds = true
         panel.contentView = content
 
-        // The strip beside the notch: tabs on the left, the shortcut on the right.
-        let side = notch > 0 ? (frame.width - notch) / 2 - 12 : frame.width / 2 - 20
-        let tabs = FirstClickHostingView(rootView: DropdownStrip(state: state) { [weak self] tab in self?.select(tab) })
-        tabs.frame = NSRect(x: 16, y: frame.height - strip, width: side - 16, height: strip)
+        // The strip beside the notch: the tabs on the left, where the open notch shows them,
+        // and the title and shortcut on the right.
+        let notch = Self.notchEdges(on: screen, panelWidth: frame.width)
+        let tabsX = max(16, notch.left - 10 - TerminalTabStrip.width)
+        // The content below spans the whole panel; in the strip's coordinates that starts left of it.
+        let tabs = TerminalTabStrip(
+            frame: NSRect(x: tabsX, y: frame.height - strip, width: TerminalTabStrip.width, height: strip),
+            contentMinX: -tabsX, contentMaxX: frame.width - tabsX)
         tabs.autoresizingMask = [.minYMargin]
+        tabs.onSelect = { [weak self] name in self?.pick(name) }
         content.addSubview(tabs)
+        tabStrip = tabs
 
-        let hint = NSTextField(labelWithString: "⌃` to hide")
-        hint.font = .systemFont(ofSize: 11, weight: .medium)
-        hint.textColor = NSColor(white: 1, alpha: 0.3)
+        let hintWidth: CGFloat = 76
+        let rightStart = notch.right + 18
+        let title = Self.label(size: 11, color: NSColor(white: 1, alpha: 0.55))
+        title.stringValue = terminalTitle
+        title.frame = NSRect(x: rightStart, y: frame.height - strip + (strip - 16) / 2,
+                             width: max(40, frame.width - 22 - hintWidth - 8 - rightStart), height: 16)
+        title.autoresizingMask = [.minYMargin]
+        content.addSubview(title)
+        titleLabel = title
+
+        let hint = Self.label(size: 11, color: NSColor(white: 1, alpha: 0.3))
+        hint.stringValue = "⌃` to hide"
         hint.alignment = .right
-        hint.frame = NSRect(x: frame.width - side, y: frame.height - strip + (strip - 16) / 2, width: side - 20, height: 16)
+        hint.frame = NSRect(x: frame.width - 22 - hintWidth, y: title.frame.minY, width: hintWidth, height: 16)
         hint.autoresizingMask = [.minXMargin, .minYMargin]
         content.addSubview(hint)
 
@@ -280,7 +314,14 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         self.panel = panel
         self.terminal = terminal
         self.widgetView = board
-        select(state.tab)
+    }
+
+    private static func label(size: CGFloat, color: NSColor) -> NSTextField {
+        let label = NSTextField(labelWithString: "")
+        label.font = .systemFont(ofSize: size, weight: .medium)
+        label.textColor = color
+        label.lineBreakMode = .byTruncatingMiddle
+        return label
     }
 
     /// Starts your login shell in your home folder, as Terminal does.
@@ -292,13 +333,16 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
             if let value = ProcessInfo.processInfo.environment[key] { environment.append("\(key)=\(value)") }
         }
         environment.append("TERM_PROGRAM=Perch")
-        let directory = startDirectory ?? NSHomeDirectory()
         terminal.startProcess(executable: shell, args: [], environment: environment,
                               execName: "-" + URL(fileURLWithPath: shell).lastPathComponent,
-                              currentDirectory: directory)
-        state.title = directory.replacingOccurrences(of: NSHomeDirectory(), with: "~")
+                              currentDirectory: startDirectory ?? NSHomeDirectory())
         startDirectory = nil
         isShellRunning = true
+    }
+
+    private func setTerminalTitle(_ text: String) {
+        terminalTitle = text
+        if tab == .terminal { titleLabel?.stringValue = text }
     }
 
     // MARK: - NSWindowDelegate
@@ -313,16 +357,16 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
     func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
 
     func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
-        if !title.isEmpty { state.title = title }
+        setTerminalTitle(title.isEmpty ? "Terminal" : title)
     }
 
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
         guard let directory, let url = URL(string: directory) else { return }
         let path = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
-        if !path.isEmpty { state.title = path }
+        setTerminalTitle(path.isEmpty ? "Terminal" : path)
     }
 
-    /// `exit` ends the shell and hides the drop-down; the next Terminal tab starts a fresh one.
+    /// `exit` puts the drop-down away; the next Terminal tab starts a fresh shell.
     func processTerminated(source: TerminalView, exitCode: Int32?) {
         isShellRunning = false
         DispatchQueue.main.async { [weak self] in

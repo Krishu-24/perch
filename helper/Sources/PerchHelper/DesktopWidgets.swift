@@ -3,7 +3,9 @@
 //  PerchHelper
 //
 //  Puts the widget board on the desktop: a borderless window at desktop level, so
-//  every app window covers it, on every Space, and clickable without taking focus.
+//  every app window covers it, clickable without taking focus. By default it only
+//  appears while you're on the desktop (Finder in front, as after clicking the
+//  wallpaper) and fades away when you go back to an app.
 //
 
 import AppKit
@@ -19,29 +21,78 @@ private final class FirstClickHostingView<Content: View>: NSHostingView<Content>
 final class DesktopWidgets {
     /// Room around the cards for their shadows.
     private static let margin: CGFloat = 20
+    private static let finderID = "com.apple.finder"
 
     let model = WidgetModel()
     private var panel: NSPanel?
     private var settings: WidgetSettings?
-    private var screenObserver: NSObjectProtocol?
+    private var isShown = false
+    private var observers: [NSObjectProtocol] = []
 
     init() {
-        screenObserver = NotificationCenter.default.addObserver(
+        observers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.place()
+        })
+        // Whether you're on the desktop changes with the frontmost app.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification] {
+            observers.append(workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.update(animated: true)
+            })
         }
+    }
+
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0); NSWorkspace.shared.notificationCenter.removeObserver($0) }
     }
 
     /// Shows, hides or moves the board to match Perch's settings.
     func apply(_ newSettings: WidgetSettings) {
         guard newSettings != settings else { return }
+        let moved = newSettings.position != settings?.position
         settings = newSettings
-        if newSettings.showDesktopWidgets {
-            if panel == nil { build() }
-            place()
-            panel?.orderFront(nil)
+        if moved { place() }
+        update(animated: false)
+    }
+
+    /// Whether the board belongs on screen right now.
+    private var shouldShow: Bool {
+        switch settings?.visibility ?? .onDesktop {
+        case .always: return true
+        case .off: return false
+        case .onDesktop:
+            // Finder in front means the desktop: clicking the wallpaper, or nothing else open.
+            // Clicking a widget doesn't change it, since the board never takes focus.
+            return NSWorkspace.shared.frontmostApplication?.bundleIdentifier == Self.finderID
+        }
+    }
+
+    private func update(animated: Bool) {
+        let show = shouldShow
+        guard show != isShown else { return }
+        isShown = show
+        if show {
+            if panel == nil { build(); place() }
+            guard let panel else { return }
+            panel.alphaValue = animated ? 0 : 1
+            panel.orderFront(nil)
+            if animated {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.2
+                    panel.animator().alphaValue = 1
+                }
+            }
         } else {
-            panel?.orderOut(nil)
+            guard let panel else { return }
+            guard animated else { panel.orderOut(nil); return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.15
+                panel.animator().alphaValue = 0
+            }, completionHandler: { [weak self] in
+                // Ordered out, not just transparent, so it can't catch clicks meant for the desktop.
+                if self?.isShown == false { panel.orderOut(nil) }
+            })
         }
     }
 

@@ -19,8 +19,8 @@ struct DevView: View {
             isHelperRunning: store.isHelperRunning,
             isHelperInstalled: DevStore.helperURL != nil,
             actions: DevActions(
-                toggleTerminal: store.toggleTerminal,
-                toggleWidgets: store.toggleWidgets,
+                toggleTerminal: store.showTerminal,
+                toggleWidgets: store.showWidgets,
                 openTerminal: store.openTerminal(in:),
                 open: store.open,
                 startHelper: store.startHelper,

@@ -240,14 +240,24 @@ public enum WidgetPosition: String, Codable, CaseIterable {
     case topRight, topLeft, bottomRight, bottomLeft
 }
 
+/// When the widget board is on the desktop.
+public enum WidgetVisibility: String, Codable, CaseIterable {
+    /// Only while you're on the desktop: Finder in front, as after clicking the wallpaper.
+    case onDesktop
+    /// All the time, beneath your windows.
+    case always
+    /// Never.
+    case off
+}
+
 /// `settings.json` in Perch's folder. Perch writes it; Perch Helper reads it.
 public struct WidgetSettings: Codable, Equatable {
-    public var showDesktopWidgets: Bool
+    public var visibility: WidgetVisibility
     public var position: WidgetPosition
 
-    /// Off by default: the widgets live in the drop-down, and the desktop is optional.
-    public init(showDesktopWidgets: Bool = false, position: WidgetPosition = .topRight) {
-        self.showDesktopWidgets = showDesktopWidgets
+    /// Never on the desktop by default: the widgets live in the drop-down.
+    public init(visibility: WidgetVisibility = .off, position: WidgetPosition = .topRight) {
+        self.visibility = visibility
         self.position = position
     }
 
@@ -257,5 +267,29 @@ public struct WidgetSettings: Codable, Equatable {
         guard let data = try? Data(contentsOf: folder.appendingPathComponent(fileName)),
               let settings = try? JSONDecoder().decode(WidgetSettings.self, from: data) else { return WidgetSettings() }
         return settings
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case visibility, position
+        case showDesktopWidgets  // 1.3.0's on/off switch
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        position = try container.decodeIfPresent(WidgetPosition.self, forKey: .position) ?? .topRight
+        if let visibility = try? container.decodeIfPresent(WidgetVisibility.self, forKey: .visibility) {
+            self.visibility = visibility
+        } else if try container.decodeIfPresent(Bool.self, forKey: .showDesktopWidgets) == false {
+            visibility = .off
+        } else {
+            // 1.3.0 showed them all the time; they now stay out of the way until you're on the desktop.
+            visibility = .onDesktop
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(visibility, forKey: .visibility)
+        try container.encode(position, forKey: .position)
     }
 }

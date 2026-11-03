@@ -18,21 +18,19 @@ Files: `sessions/<id>.json` and `limits.json` (from the mod), `dev.json` and `he
 the helper), `settings.json` (from Perch). The `dev.json` format is `boringNotch/Dev/DevSnapshot.swift`,
 which `helper/Sources/PerchDevCore/DevSnapshot.swift` links to; change it in one place.
 
-## Where things stand (3 November 2026)
+## Where things stand (4 November 2026)
 
-- **Published:** v1.3.0 is on GitHub as the latest release
-  (https://github.com/Krishu-24/perch/releases/tag/v1.3.0) and installed on the owner's Mac.
-- **Two competing 1.4.0 versions, not merged.** The owner asked to stop the terminal being covered when
-  the notch opens, and to put the widgets in the drop-down with the terminal. Two sessions answered:
-  - Branch **`dropdown-tabs`** (this file's branch): one drop-down with **Terminal** and **Widgets** tabs;
-    desktop widgets optional and off by default; the notch won't open on hover while the drop-down is in
-    front; the Dev tab's GitHub card opens the Widgets tab.
-  - Commit **`c589e04`** (worktree `../perch-1.4`, branch `claude/laughing-bell-ofdhz1` on GitHub): hover to
-    switch notch tabs with a "safe triangle" rule, the terminal above the notch with Perch closing beneath
-    it via distributed notifications, desktop widgets only while Finder is in front, and a lock icon on the
-    lock screen.
-  - **Decision pending:** which to keep, or how to combine them. Don't merge either into `main` until the
-    owner says. Both bump the version to 1.4.0.
+- **Published:** v1.3.0 is the latest GitHub release. **v1.4.0 is merged into `main`** and installed on
+  the owner's Mac, but not yet published as a release.
+- **1.4.0 combines two sessions' work.** Branch `dropdown-tabs` put the widgets in the drop-down (a Widgets
+  tab beside Terminal); the cloud session's branch `claude/laughing-bell-ofdhz1` added hover-to-switch tabs
+  with a "safe triangle" (`TabAim`), the drop-down above the notch with show/hide notifications to Perch, the
+  notch's tabs along the drop-down's strip, desktop widgets that only appear while Finder is in front, and a
+  lock icon. The merge keeps all of it: the strip's tabs are Home, Terminal, Widgets, Limits, Claude, Dev;
+  Terminal and Widgets switch inside the drop-down, the rest put it away and open the notch on that tab.
+  Desktop widgets default to *No, drop-down only* (`WidgetVisibility.off`).
+- **Seen only in renders, not on screen:** the drop-down's strip and Widgets tab (AppKit, not renderable),
+  and the lock icon. Ask the owner how they look.
 
 ## How to work on it
 

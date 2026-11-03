@@ -8,8 +8,10 @@
 //
 //  It answers two URLs, which Perch opens:
 //    perch-helper://terminal                 show or hide the drop-down's Terminal tab
+//    perch-helper://terminal?show            show it (hovering the notch's Terminal tab)
 //    perch-helper://terminal?cd=<folder>     show it in one of the Dev tab's projects
 //    perch-helper://widgets                  show or hide the drop-down's Widgets tab
+//    perch-helper://widgets?show             show it (from the notch's Dev tab)
 //    perch-helper://refresh                  collect everything now, GitHub included
 //
 
@@ -84,16 +86,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let url = URL(string: text), url.scheme == "perch-helper" else { return }
         switch url.host {
         case "terminal":
-            let folder = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                .queryItems?.first { $0.name == "cd" }?.value
-            if let folder {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            if let folder = items.first(where: { $0.name == "cd" })?.value {
                 // Only folders the Dev tab lists; anything else is ignored.
                 if collector.isKnownProject(folder) { dropdown.show(in: folder) }
+            } else if items.contains(where: { $0.name == "show" }) {
+                dropdown.show(.terminal)
             } else {
                 dropdown.toggle(.terminal)
             }
         case "widgets":
-            dropdown.toggle(.widgets)
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            if items.contains(where: { $0.name == "show" }) { dropdown.show(.widgets) } else { dropdown.toggle(.widgets) }
         case "refresh":
             collector.refreshNow()
         default:

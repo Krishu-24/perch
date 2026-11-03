@@ -136,5 +136,42 @@ section("justFinished") {
           "ones that finished before you last opened Claude are seen")
 }
 
+section("tab aim: the safe triangle") {
+    let a = CGPoint(x: 0, y: 0), b = CGPoint(x: -10, y: 10), c = CGPoint(x: 10, y: 10)
+    check(TabAim.triangle(a, b, c, contains: CGPoint(x: 0, y: 5)), true, "inside")
+    check(TabAim.triangle(a, c, b, contains: CGPoint(x: 0, y: 5)), true, "either winding")
+    check(TabAim.triangle(a, b, c, contains: CGPoint(x: 8, y: 2)), false, "outside, beside the apex")
+    check(TabAim.triangle(a, b, c, contains: CGPoint(x: 5, y: 0)), false, "level with the apex is outside")
+
+    // Tabs in a 26-point row; the content starts at y = 34 and spans x = -8 to 580.
+    var aim = TabAim(contentTop: 34, contentMinX: -8, contentMaxX: 580)
+    check(aim.move(to: CGPoint(x: 100, y: 10)), false, "the first location has nothing to compare with")
+    check(aim.move(to: CGPoint(x: 101, y: 14)), true, "moving down is heading for the content")
+    check(aim.move(to: CGPoint(x: 103, y: 20)), true, "and still is")
+
+    aim.reset()
+    _ = aim.move(to: CGPoint(x: 200, y: 12))
+    check(aim.move(to: CGPoint(x: 170, y: 12)), false, "moving along the row means the tab you're on")
+    check(aim.move(to: CGPoint(x: 140, y: 11)), false, "moving along the row and up a little, too")
+
+    aim.reset()
+    _ = aim.move(to: CGPoint(x: 100, y: 20))
+    check(aim.move(to: CGPoint(x: 100, y: 12)), false, "moving up, away from the content")
+
+    aim.reset()
+    _ = aim.move(to: CGPoint(x: 100, y: 10))
+    check(aim.move(to: CGPoint(x: 100, y: 40)), false, "past the row's edge is in the content, not aiming")
+
+    aim.reset()
+    for y in [7, 10, 13, 16] as [CGFloat] { _ = aim.move(to: CGPoint(x: 100, y: y)) }
+    check(aim.trail.count, 3, "keeps only the last few locations")
+    check(aim.trail.first, CGPoint(x: 100, y: 10), "the apex is the oldest of them")
+
+    check(TabAim.delay(isAction: false, headingForContent: false), TabAim.settleDelay, "a tab you stop on switches quickly")
+    check(TabAim.delay(isAction: false, headingForContent: true), TabAim.aimDelay, "a tab you cross on the way down waits")
+    check(TabAim.delay(isAction: true, headingForContent: false), TabAim.actionDelay, "the terminal wants a real pause")
+    check(TabAim.aimDelay > TabAim.settleDelay && TabAim.actionDelay > TabAim.settleDelay, true, "the waits are in order")
+}
+
 print(failures == 0 ? "PASS: \(checks) checks" : "\(failures) of \(checks) checks failed")
 exit(failures == 0 ? 0 : 1)

@@ -35,25 +35,27 @@ and desktop widgets for your whole dev setup: Git, pull requests, Actions and de
 ## What Perch does
 
 Perch is an independent notch app for macOS, built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch).
-It is not made by Anthropic or The Bored Team. Hover over the notch for a row of icon tabs:
+It is not made by Anthropic or The Bored Team. Hover over the notch for a row of icon tabs, and
+rest the pointer on one to switch to it; no clicking needed:
 
 | Tab | What's there |
 |---|---|
 | ⌂ **Home** | Music, calendar, battery and the webcam mirror, all from Boring Notch. |
-| `>_` **Terminal** | Drops the terminal out of the notch (same as Control-`). |
+| `>_` **Terminal** | Rest on it for a moment and the terminal drops out of the notch (same as Control-`). |
 | ◔ **Limits** | Your Claude Code and Codex plan limits, side by side. |
 | ✻ **Claude** | Every Claude Code session, and what it's doing. |
 | ▥ **Dev** | GitHub, Actions, dev servers and Git, at a glance. |
 
-And on your desktop, beneath your windows, a set of **widgets** for the same things, in more detail.
+And on your desktop, whenever you're on it, a set of **widgets** for the same things, in more detail.
 
 | | Feature | What you get |
 |---|---|---|
 | 📊 | **Plan limits** | Claude Code and Codex, five-hour and weekly, with "Resets 11:01 AM · in 1h 20m". |
-| 🖥️ | **Desktop widgets** | Git, GitHub reviews, Actions, dev servers, your contribution graph, and both plans' limits, on your desktop. |
+| 🖥️ | **Desktop widgets** | Git, GitHub reviews, Actions, dev servers, your contribution graph, and both plans' limits. They appear when you're on the desktop and fade when you go back to an app. |
 | 🟠 | **Live sessions** | Every Claude Code session: *Working* (and the tool it's using), *Needs you*, or *Your turn*. |
 | ✻ | **A notch that follows you** | The closed notch shows whatever you're *not* looking at: Claude while you watch something, what's playing while you're in Claude. |
 | ✋ | **Needs-you alerts** | A pulsing amber hand on the closed notch when Claude is waiting for your approval. |
+| 🔒 | **Lock icon** | A lock on the notch while your Mac is locked, which springs open when you unlock it. |
 | ⌨️ | **Drop-down terminal** | Press **Control-`** anywhere and a terminal slides out of the notch. Press it again and it's gone, still running. |
 | 🧑‍💻 | **Dev tab** | Your GitHub contribution graph, pull requests and reviews waiting on you, Actions runs, running dev servers, and the Git status of your recent projects. |
 | ↗️ | **One click away** | Click a session to jump to it, a pull request or run to open it, a dev server to open `localhost`, a project to open the terminal there. |
@@ -170,9 +172,9 @@ Perch never sees your GitHub token: it asks `gh` for data, and `gh` keeps the to
 ### Step 4 · Check it works
 
 1. Start a **new** Claude session (ones already open don't load the mod) and send any message.
-2. Hover over the notch and click **Claude**: your session appears, and once Claude replies,
+2. Hover over the notch and rest on **Claude**: your session appears, and once Claude replies,
    your plan limits fill in.
-3. Click **Dev**: your project shows up with its Git status, and GitHub fills in within a few minutes.
+3. Rest on **Dev**: your project shows up with its Git status, and GitHub fills in within a few minutes.
 4. Press **Control-`**: the terminal drops out of the notch.
 
 ---
@@ -229,21 +231,38 @@ The closed notch shows **whatever you aren't looking at**: Claude or what's play
 > When a video plays full screen, macOS hides the notch area entirely, so nothing shows there
 > until you leave full screen.
 
+### Switching tabs by hovering
+
+Rest the pointer on a tab and it switches; clicking still works too. Perch uses the *menu-aim* rule
+(the "safe triangle" good menus use) so tabs you only pass over don't switch:
+
+- **Moving along the row**, the tab you stop on switches after a blink (80 ms).
+- **Heading down to the content**, a tab you cross on the way waits (300 ms) to see whether you
+  stop on it, so a diagonal move from the tab you want into the notch never switches tabs under you.
+- **The Terminal tab** waits a little longer (400 ms), so sweeping past it to Home never drops a
+  terminal on you.
+
 ### The drop-down
 
-One panel drops out of the notch with two tabs, picked in the strip beside the notch:
+One panel drops out of the notch, with two tabs of its own:
 
 | Tab | What's there |
 |---|---|
 | **Terminal** | Your shell. |
 | **Widgets** | All the widgets below, full size: Git, GitHub, Actions, dev servers, contributions, and Claude and Codex limits. |
 
-- **Control-`** anywhere shows it on the tab you used last; **Control-`** again, or clicking anywhere else, hides it.
-- Switching tabs keeps both as they were: a command keeps running while you look at the widgets.
+- **Control-`** anywhere shows it on the tab you used last; **Control-`** again, or clicking anywhere
+  else, hides it. Resting on the notch's Terminal tab, or clicking the Dev tab's GitHub card, opens it too.
+- Switching between Terminal and Widgets keeps both as they were: a command keeps running while you
+  look at the widgets.
 - Click a project in the **Git** widget and the Terminal tab opens right in that folder.
-- While the drop-down is open, the notch stays closed underneath it, so nothing covers your terminal.
-- From the notch: the **Terminal** tab icon opens the Terminal tab; clicking the **GitHub** card on the Dev tab opens Widgets.
-- It's your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
+- It sits above the notch and the menu bar's icons, so nothing overlaps it, and the notch stays shut
+  underneath it while it's down.
+- **The other tabs stay in reach.** Its top strip shows the notch's tabs, left of the notch where the
+  open notch shows them, with Widgets beside Terminal. Rest on Home, Limits, Claude or Dev (or click
+  it) and the drop-down goes away and the notch opens on that tab. The strip waits for the pointer to
+  move first, so nothing switches just because the drop-down landed under a resting pointer.
+- The terminal is your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
 - Hiding doesn't stop anything: a running command keeps going, and you come back to the same place.
 - Typing `exit` closes it; the next Control-` starts a fresh shell.
 - Click the **Git** card on the Dev tab to open the terminal right in the project with changes.
@@ -274,9 +293,10 @@ Local cards refresh every 6 seconds; GitHub every 3 minutes.
 
 <img src="docs/images/desktop-widgets.png" alt="The desktop widgets" width="640">
 
-The widgets live in the drop-down's **Widgets** tab. If you'd also like them on your desktop, beneath
-your windows, turn that on in **Settings → Widgets**. Each widget leads with one big number and lists
-the three things behind it.
+The widgets live in the drop-down's **Widgets** tab. They can also sit on your desktop, just above the
+desktop icons and beneath every window: either only while you're **on the desktop** (click the
+wallpaper, or have Finder in front), fading when you go back to an app, or all the time. Each widget
+leads with one big number and lists the three things behind it.
 
 | Widget | The big number | The list | Click a row to |
 |---|---|---|---|
@@ -287,7 +307,7 @@ the three things behind it.
 | **Contributions** | Your contributions in the last year | The last 24 weeks, plus your streak | — |
 | **Claude / Codex** | Five-hour usage | The week's usage, and what Claude is doing or your Codex plan | — |
 
-Put them on your desktop too, and pick the corner, in **Settings → Widgets**.
+Put them on the desktop too, and pick the corner, in **Settings → Widgets**.
 
 ### Settings → Claude
 
@@ -302,10 +322,17 @@ Put them on your desktop too, and pick the corner, in **Settings → Widgets**.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Also show widgets on the desktop | Off | Keeps the widgets on your desktop too, beneath your windows. |
+| Also on the desktop | No, drop-down only | *On the desktop* shows them while Finder is in front; *Always* keeps them beneath your windows all the time. |
 | Corner | Top right | Which corner of the screen they sit in, clear of the menu bar and Dock. |
 | Perch Helper / GitHub | — | Whether the helper is running and GitHub is connected. |
 | Refresh Now | — | Collects everything again straight away, GitHub included. |
+
+### The lock icon
+
+When your Mac locks, the closed notch shows a lock, and it springs open in green for a moment when
+you unlock. While locked, the notch shows **only** the lock (no sessions, music or calendar) and won't
+open. Turn it off in **Settings → Advanced → Show a lock on the notch when your Mac is locked**. (The
+older **Show notch on lock screen**, off by default, shows the whole notch there instead.)
 
 ---
 
@@ -372,7 +399,7 @@ Here is everything it does:
 | `sessions/<id>.json` | Session ID, project folder, first 120 characters of your latest prompt, tool name, status, time. | Deleted after 24 hours. |
 | `limits.json` | Five-hour and weekly usage and reset times. | Overwritten as it changes. |
 | `dev.json` | Your recent projects' Git status, dev servers, Codex's limits, and the GitHub data on the Dev tab. | Overwritten every few seconds. |
-| `settings.json` | Whether to show the desktop widgets, and in which corner. | Until you change it. |
+| `settings.json` | When to show the desktop widgets, and in which corner. | Until you change it. |
 | `helper-state.json` | Up to 12 recent project folders, so they survive a restart. | Folders that no longer exist are dropped. |
 
 These are plain text files, readable by any app running as you, just like Claude Code's own history
@@ -415,10 +442,12 @@ perch/
 │   │   ├── ClaudeUsage.swift          parses limits.json
 │   │   ├── ClaudeFormatting.swift     "Resets in 2h 13m", "4m ago"
 │   │   └── StatusIcons.swift, ProcessingSpinner.swift, TerminalColors.swift
-│   ├── Dev/                           ← the Dev tab
+│   ├── Dev/                           ← the Dev tab, and the notch's other Perch parts
 │   │   ├── DevView.swift              the cards and the one-glance layout
-│   │   ├── DevStore.swift             reads dev.json, starts the helper, opens links
-│   │   └── DevSnapshot.swift          the dev.json format, shared with the helper
+│   │   ├── DevStore.swift             reads dev.json, starts the helper, tracks the terminal
+│   │   ├── DevSnapshot.swift          the dev.json format, shared with the helper
+│   │   ├── TabAim.swift               hover-to-switch tabs, with the menu-aim rule
+│   │   └── LockIndicator.swift        the lock on the notch while your Mac is locked
 │   └── …                              Boring Notch (Home tab, music, HUDs, settings)
 ├── helper/                            ← Perch Helper, a Swift package
 │   ├── Sources/PerchHelper/
@@ -447,6 +476,7 @@ perch/
 |---|---|
 | Change the colours | `TerminalColors` in `boringNotch/Claude/TerminalColors.swift`. |
 | Use a different terminal shortcut | `HotKey(keyCode:modifiers:)` in `helper/Sources/PerchHelper/main.swift`. |
+| Change how quickly hovering switches tabs | `settleDelay`, `aimDelay` and `actionDelay` in `boringNotch/Dev/TabAim.swift`. |
 | Make the terminal bigger or smaller | `maxSize` in `helper/Sources/PerchHelper/TerminalPanel.swift`. |
 | Keep the terminal open when you click elsewhere | Remove `windowDidResignKey` in `TerminalPanel.swift`. |
 | Refresh GitHub more or less often | `githubInterval` in `helper/Sources/PerchHelper/Collector.swift`. |

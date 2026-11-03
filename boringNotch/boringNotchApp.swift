@@ -64,6 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var screenLockedObserver: Any?
     private var screenUnlockedObserver: Any?
     private var isScreenLocked: Bool = false
+    /// Whether the notch stayed up through the lock (for its lock icon, or the whole notch),
+    /// rather than being taken down; unlocking undoes whichever happened.
+    private var keptNotchWhileLocked = false
     private var windowScreenDidChangeObserver: Any?
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -87,9 +90,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func onScreenLocked(_ notification: Notification) {
         isScreenLocked = true
-        if !Defaults[.showOnLockScreen] {
+        keptNotchWhileLocked = Defaults[.showOnLockScreen] || Defaults[.showLockIcon]
+        if Defaults[.showLockIcon] { LockStatus.shared.didLock() }
+        if !keptNotchWhileLocked {
             cleanupWindows()
         } else {
+            // Shut, so the lock screen shows the closed notch with its lock, not your sessions.
+            if !Defaults[.showOnLockScreen] {
+                vm.close()
+                viewModels.values.forEach { $0.close() }
+            }
             enableSkyLightOnAllWindows()
         }
     }
@@ -97,7 +107,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func onScreenUnlocked(_ notification: Notification) {
         isScreenLocked = false
-        if !Defaults[.showOnLockScreen] {
+        LockStatus.shared.didUnlock()
+        if !keptNotchWhileLocked {
             adjustWindowPosition(changeAlpha: true)
         } else {
             disableSkyLightOnAllWindows()

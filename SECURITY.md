@@ -39,6 +39,7 @@ claude plugin validate claude-mod/perch-bridge
 | **File access** | One exception: read/write to `~/Library/Application Support/Perch/` (to read the mod's files and delete ones older than 24 hours). Otherwise only files you pick yourself. |
 | **Updates** | Sparkle is never started and the update feed URL is removed, so the app cannot download or replace itself. |
 | **Telemetry** | None. |
+| **Lock screen** | With the lock icon on (the default), the notch stays on the lock screen through SkyLight, as Boring Notch's *Show notch on lock screen* does, but shows only a lock: no sessions, music or calendar, and it won't open. |
 | **Network** | Only Boring Notch's music features: album art from your player, one LottieFiles animation, lrclib.net lyrics *if you turn lyrics on*, and `localhost` for YouTube Music. The Claude features use no network. |
 | **Library validation** | Turned off (`com.apple.security.cs.disable-library-validation`). Release builds are signed ad hoc, with no developer identity, so macOS can't confirm that the bundled frameworks (Sparkle, Lottie, MediaRemoteAdapter) come from the same developer as the app and would refuse to start it. The rest of the hardened runtime stays on. If you sign Perch with your own Apple Developer ID, you can delete this entitlement. |
 | **Inherited entitlements** | Camera (mirror), Calendars (calendar), Apple Events for Music and Spotify, network client and server. These come from Boring Notch and are used only by its Home-tab features. |
@@ -58,8 +59,9 @@ Source: [`helper/`](helper/).
 | **Files it writes** | `dev.json` and `helper-state.json` in `~/Library/Application Support/Perch/`. |
 | **Files it reads** | The mod's `sessions/*.json` and `limits.json`, Perch's `settings.json`, the Git repositories you work in, and the last 512 KB of the newest three Codex session logs (`~/.codex/sessions/` and `~/.codex/archived_sessions/`, `rollout-*.jsonl` only) for Codex's limits. It never opens `~/.codex/auth.json`. |
 | **Windows** | The drop-down terminal, and the desktop widgets: a borderless panel at desktop-icon level that never takes focus, on every Space. Clicking a widget opens a link in your browser or the terminal in a listed project. |
+| **Notifications** | It posts three system-wide notifications: *terminal shown* and *terminal hidden*, with no contents, so Perch keeps the notch shut beneath the terminal, and *open tab*, carrying only a tab's name (`home`, `limits`, `claude` or `dev`), when you pick a tab from the terminal's top strip. Perch ignores any other name. To show the widgets only on the desktop it watches which app is frontmost (its bundle ID, nothing else). |
 | **Keyboard** | One global hot key, Control-`, through Carbon's `RegisterEventHotKey`. It needs no Accessibility permission and receives only that combination. |
-| **Links it accepts** | `perch-helper://terminal` and `perch-helper://widgets` (show or hide that tab of the drop-down), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
+| **Links it accepts** | `perch-helper://terminal` and `perch-helper://widgets` (show or hide that tab of the drop-down), the same with `?show` (only ever show), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
 
 ## Data at rest
 

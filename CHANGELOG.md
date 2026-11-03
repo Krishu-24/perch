@@ -2,18 +2,34 @@
 
 ## 1.4.0 · 3 November 2026
 
+### Added
+
+- **Widgets in the drop-down.** The drop-down gains a Widgets tab beside Terminal, with every widget at full
+  size. Control-` opens it on the tab you used last, both tabs keep their state while you switch, and
+  clicking a project in the Git widget switches to the Terminal tab in that folder. The Dev tab's GitHub
+  card opens it too.
+- **Hover to switch tabs.** Rest the pointer on a notch tab and it switches; no click needed. The
+  menu-aim ("safe triangle") rule keeps tabs you only cross on the way down to the content from
+  switching, and the Terminal tab waits a little longer so sweeping past it never drops a terminal.
+- **The other tabs stay in reach from the drop-down.** Its top strip shows the notch's tabs where the open
+  notch has them, plus Widgets; resting on Home, Limits, Claude or Dev puts the drop-down away and opens
+  the notch on that tab.
+- **A lock on the notch while your Mac is locked**, which springs open in green when you unlock. While
+  locked the notch shows only the lock and won't open. Settings → Advanced turns it off.
+
 ### Changed
 
-- **One drop-down with two tabs, Terminal and Widgets.** Control-` opens it on the tab you used last.
-  The widgets live there at full size; clicking a project in the Git widget switches to the Terminal tab
-  in that folder. Both tabs keep their state while you switch.
-- **Desktop widgets are now optional** and off by default (Settings → Widgets).
-- From the notch, the GitHub card on the Dev tab opens the Widgets tab.
+- **Desktop widgets are optional, and off by default**, since they now live in the drop-down. Settings →
+  Widgets → Also on the desktop: *On the desktop* (only while you're looking at the desktop, fading when you
+  go back to an app), *Always*, or *No, drop-down only*.
 
 ### Fixed
 
-- The notch no longer opens over the drop-down: it stays closed while the drop-down is in front, and the
-  drop-down now sits above the notch panel.
+- **The terminal is no longer covered.** It sat beneath the notch and at the same level as the menu
+  bar's icons, so the open notch and status items drew over it. It now sits above both, the notch
+  closes when it drops, and the notch won't open underneath it while it's down.
+- Opening the terminal in a project while it was already down forgot which app to return to.
+- A hide that was still animating could put the drop-down away right after you'd brought it back.
 
 ## 1.3.0 · 3 November 2026
 

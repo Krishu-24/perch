@@ -163,6 +163,10 @@ extension Defaults.Keys {
     static let claudeLiveActivity = Key<Bool>("claudeLiveActivity", default: true)
     static let claudeOpenWhenNeeded = Key<Bool>("claudeOpenWhenNeeded", default: false)
 
+    // MARK: Lock
+    /// A lock on the closed notch while the Mac is locked (LockIndicator.swift).
+    static let showLockIcon = Key<Bool>("perchShowLockIcon", default: true)
+
     // MARK: Calendar
     static let calendarSelectionState = Key<CalendarSelectionState>("calendarSelectionState", default: .all)
     static let hideAllDayEvents = Key<Bool>("hideAllDayEvents", default: false)
