@@ -7,7 +7,7 @@
 Your Claude Code and Codex limits, live Claude sessions, a terminal that drops out of the notch,
 and desktop widgets for your whole dev setup: Git, pull requests, Actions and dev servers.
 
-![Version](https://img.shields.io/badge/version-1.4.0-d97757)
+![Version](https://img.shields.io/badge/version-1.4.1-d97757)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
@@ -121,7 +121,7 @@ None of the pieces call each other. Each writes or reads plain files in one fold
 
 ### Step 1 · Install the app
 
-1. Download **`Perch-1.4.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+1. Download **`Perch-1.4.1.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
 2. Unzip it and drag **Perch.app** into **Applications**.
 3. Open it. macOS will say it *can't check Perch for malicious software*, because the app isn't
    signed with a paid Apple Developer ID. To open it anyway:

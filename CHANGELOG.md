@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1 · 4 November 2026
+
+### Fixed
+
+- The Git widget reads "of 1 project to do" instead of "of 1 projects to do".
+
 ## 1.4.0 · 3 November 2026
 
 ### Added
