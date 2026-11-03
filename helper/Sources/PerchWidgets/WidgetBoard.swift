@@ -252,7 +252,7 @@ struct GitWidget: View {
             HStack(alignment: .top, spacing: 14) {
                 WidgetSummary(title: "Git", icon: "arrow.triangle.branch", tint: WidgetPalette.git,
                               number: "\(projects.filter(Self.needsWork).count)",
-                              caption: projects.isEmpty ? "projects yet" : "of \(projects.count) projects to do") {
+                              caption: projects.isEmpty ? "projects yet" : "of \(projects.count) \(projects.count == 1 ? "project" : "projects") to do") {
                     StatusPills(colors: projects.map(Self.color))
                 }
                 VStack(spacing: 4) {

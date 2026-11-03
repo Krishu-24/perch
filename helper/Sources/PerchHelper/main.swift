@@ -56,6 +56,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.refreshWidgets() }
         collector.start()
 
+        #if DEBUG
+        // Debug builds only: PERCH_SNAPSHOT_DIR=<folder> opens the drop-down on each tab,
+        // draws it to PNGs there, and quits.
+        if let folder = ProcessInfo.processInfo.environment["PERCH_SNAPSHOT_DIR"] {
+            let out = URL(fileURLWithPath: folder, isDirectory: true)
+            try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [self] in
+                dropdown.show(.terminal)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [self] in
+                    dropdown.snapshot(to: out.appendingPathComponent("dropdown-terminal.png"))
+                    dropdown.show(.widgets)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [self] in
+                        dropdown.snapshot(to: out.appendingPathComponent("dropdown-widgets.png"))
+                        NSApp.terminate(nil)
+                    }
+                }
+            }
+        }
+        #endif
+
         // Quit along with Perch. Perch has no Dock icon, and macOS doesn't announce such apps
         // quitting, so look every few seconds. A helper started on its own, with no Perch
         // running yet, keeps going until it has seen Perch.

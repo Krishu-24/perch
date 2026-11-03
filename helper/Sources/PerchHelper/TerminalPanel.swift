@@ -173,6 +173,35 @@ final class DropdownController: NSObject, NSWindowDelegate, LocalProcessTerminal
         }
     }
 
+    #if DEBUG
+    /// Debug builds only: draws the drop-down's own window to a PNG, so its layout can be
+    /// checked without a screenshot (which needs Screen Recording permission), and saves the
+    /// terminal's visible text to a .txt beside it.
+    func snapshot(to url: URL) {
+        guard let view = panel?.contentView, let layer = view.layer else { return }
+        // The layer tree, so layer colours (the terminal's black) come out too.
+        let scale = panel?.backingScaleFactor ?? 2
+        let size = NSSize(width: view.bounds.width * scale, height: view.bounds.height * scale)
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+              let context = NSGraphicsContext(bitmapImageRep: rep) else { return }
+        context.cgContext.scaleBy(x: scale, y: scale)
+        layer.render(in: context.cgContext)
+        // The terminal's own pixels don't come through a layer render (it shows as blank), so its
+        // visible text is saved alongside instead.
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+
+        // And what the terminal shows, as text.
+        if let terminal, tab == .terminal {
+            let screen = terminal.getTerminal()
+            let lines = (0..<screen.rows).compactMap { screen.getLine(row: $0)?.translateToString(trimRight: true) }
+            try? lines.joined(separator: "\n").write(to: url.deletingPathExtension().appendingPathExtension("txt"),
+                                                     atomically: true, encoding: .utf8)
+        }
+    }
+    #endif
+
     func hide(then completion: (() -> Void)? = nil) {
         guard let panel, isVisible else { return }
         isHiding = true
