@@ -2,10 +2,11 @@
 //  TerminalTabStrip.swift
 //  PerchHelper
 //
-//  The notch's tabs, along the terminal's top strip just left of the notch, where the
-//  open notch shows them. The terminal covers the notch, so without these the other
-//  tabs would be out of reach until you put the terminal away. Resting on one (or
-//  clicking it) puts the terminal away and opens the notch on that tab.
+//  The notch's tabs, plus Widgets, along the drop-down's top strip just left of the
+//  notch, where the open notch shows them. The drop-down covers the notch, so without
+//  these the other tabs would be out of reach until you put it away. Terminal and
+//  Widgets switch inside the drop-down; resting on (or clicking) any other tab puts the
+//  drop-down away and opens the notch on that tab.
 //
 //  Hovering works like the notch's own tabs, with TabAim's safe triangle, plus one rule
 //  of its own: the strip ignores the pointer until it has moved, since the terminal
@@ -27,11 +28,11 @@ final class TerminalTabStrip: NSView {
     static let tabs = [
         Tab(name: "home", symbol: "house.fill", label: "Home"),
         Tab(name: "terminal", symbol: "apple.terminal.fill", label: "Terminal"),
+        Tab(name: "widgets", symbol: "square.grid.2x2.fill", label: "Widgets"),
         Tab(name: "limits", symbol: "gauge.with.dots.needle.33percent", label: "Limits"),
         Tab(name: "claude", symbol: "sparkles", label: "Claude"),
         Tab(name: "dev", symbol: "chart.bar.xaxis", label: "Dev"),
     ]
-    static let current = "terminal"
     static let tabWidth: CGFloat = 40
     static let tabHeight: CGFloat = 24
     static var width: CGFloat { tabWidth * CGFloat(tabs.count) }
@@ -43,6 +44,8 @@ final class TerminalTabStrip: NSView {
 
     /// Called with a tab's name when one is picked.
     var onSelect: ((String) -> Void)?
+    /// The drop-down's tab showing now: "terminal" or "widgets".
+    private(set) var current = "terminal"
 
     private var buttons: [NSButton] = []
     private var hovered: Int?
@@ -79,7 +82,13 @@ final class TerminalTabStrip: NSView {
 
     required init?(coder: NSCoder) { fatalError("not used") }
 
-    /// Called each time the terminal drops: forget the last hover and wait for the pointer to move.
+    /// Marks which of the drop-down's own tabs is showing.
+    func setCurrent(_ name: String) {
+        current = name
+        restyle()
+    }
+
+    /// Called each time the drop-down drops: forget the last hover and wait for the pointer to move.
     func arm() {
         cancelPending()
         hovered = nil
@@ -130,7 +139,7 @@ final class TerminalTabStrip: NSView {
             hovered = index
             restyle()
         }
-        guard let index, Self.tabs[index].name != Self.current else {
+        guard let index, Self.tabs[index].name != current else {
             cancelPending()
             return
         }
@@ -158,14 +167,14 @@ final class TerminalTabStrip: NSView {
     private func select(_ index: Int) {
         cancelPending()
         let name = Self.tabs[index].name
-        guard name != Self.current else { return }
+        guard name != current else { return }
         onSelect?(name)
     }
 
-    /// The terminal's tab sits in a capsule, as the notch's selected tab does; the hovered one brightens.
+    /// The showing tab sits in a capsule, as the notch's selected tab does; the hovered one brightens.
     private func restyle() {
         for (index, button) in buttons.enumerated() {
-            let isCurrent = Self.tabs[index].name == Self.current
+            let isCurrent = Self.tabs[index].name == current
             button.contentTintColor = isCurrent || hovered == index ? .white : NSColor(white: 1, alpha: 0.45)
             button.layer?.backgroundColor = isCurrent ? NSColor(white: 1, alpha: 0.14).cgColor : NSColor.clear.cgColor
         }
