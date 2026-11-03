@@ -20,6 +20,7 @@ struct DevView: View {
             isHelperInstalled: DevStore.helperURL != nil,
             actions: DevActions(
                 toggleTerminal: store.toggleTerminal,
+                toggleWidgets: store.toggleWidgets,
                 openTerminal: store.openTerminal(in:),
                 open: store.open,
                 startHelper: store.startHelper,
@@ -36,6 +37,7 @@ struct DevView: View {
 
 struct DevActions {
     var toggleTerminal: () -> Void = {}
+    var toggleWidgets: () -> Void = {}
     var openTerminal: (GitProject) -> Void = { _ in }
     var open: (String) -> Void = { _ in }
     var startHelper: () -> Void = {}
@@ -272,8 +274,14 @@ struct DevContributionsTile: View {
         .padding(.vertical, 8)
         .frame(width: ContributionGraph.width + 20)
         .frame(maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.06)))
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(isHovered ? 0.1 : 0.06)))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onTapGesture { if github != nil { actions.toggleWidgets() } }
+        .onHover { isHovered = $0 && github != nil }
+        .help(github != nil ? "Open all widgets in the drop-down" : "")
     }
+
+    @State private var isHovered = false
 
     @ViewBuilder
     private var footer: some View {

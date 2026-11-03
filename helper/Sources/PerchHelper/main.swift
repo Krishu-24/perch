@@ -7,8 +7,9 @@
 //  two jobs: the drop-down terminal, and collecting the Dev tab's data.
 //
 //  It answers two URLs, which Perch opens:
-//    perch-helper://terminal                 show or hide the terminal
+//    perch-helper://terminal                 show or hide the drop-down's Terminal tab
 //    perch-helper://terminal?cd=<folder>     show it in one of the Dev tab's projects
+//    perch-helper://widgets                  show or hide the drop-down's Widgets tab
 //    perch-helper://refresh                  collect everything now, GitHub included
 //
 
@@ -19,9 +20,10 @@ import PerchDevCore
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let perchBundleID = "io.github.krishu-24.perch"
 
-    private let terminal = TerminalController()
     private let collector = Collector()
     private let widgets = DesktopWidgets()
+    /// The drop-down shares the desktop widgets' data, so both show the same thing.
+    private lazy var dropdown = DropdownController(widgets: widgets.model)
     private var hotKey: HotKey?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -41,12 +43,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         hotKey = HotKey(keyCode: kVK_ANSI_Grave, modifiers: controlKey) { [weak self] in
-            DispatchQueue.main.async { self?.terminal.toggle() }
+            DispatchQueue.main.async { self?.dropdown.toggle() }
         }
         // The desktop widgets: data from the collector, Claude from the mod's files,
         // and whether to show them (and where) from the settings Perch writes.
         widgets.model.open = { NSWorkspace.shared.open($0) }
-        widgets.model.openTerminal = { [weak self] project in self?.terminal.show(in: project.path) }
+        widgets.model.openTerminal = { [weak self] project in self?.dropdown.show(in: project.path) }
         collector.onUpdate = { [weak self] snapshot in self?.widgets.model.snapshot = snapshot }
         refreshWidgets()
         Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.refreshWidgets() }
@@ -86,10 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .queryItems?.first { $0.name == "cd" }?.value
             if let folder {
                 // Only folders the Dev tab lists; anything else is ignored.
-                if collector.isKnownProject(folder) { terminal.show(in: folder) }
+                if collector.isKnownProject(folder) { dropdown.show(in: folder) }
             } else {
-                terminal.toggle()
+                dropdown.toggle(.terminal)
             }
+        case "widgets":
+            dropdown.toggle(.widgets)
         case "refresh":
             collector.refreshNow()
         default:

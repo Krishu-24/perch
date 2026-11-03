@@ -42,8 +42,8 @@ final class WidgetDataTests: XCTestCase {
         XCTAssertEqual(status.working, 0)
     }
 
-    func testWidgetSettingsDefaultToShownTopRight() throws {
-        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(showDesktopWidgets: true, position: .topRight))
+    func testWidgetSettingsDefaultToHiddenTopRight() throws {
+        XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(showDesktopWidgets: false, position: .topRight))
         try write(#"{"showDesktopWidgets":false,"position":"bottomLeft"}"#, to: WidgetSettings.fileName)
         XCTAssertEqual(WidgetSettings.load(from: folder), WidgetSettings(showDesktopWidgets: false, position: .bottomLeft))
         try write("not json", to: WidgetSettings.fileName)

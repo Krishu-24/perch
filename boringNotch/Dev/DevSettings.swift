@@ -33,7 +33,7 @@ struct DevSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Show widgets on the desktop", isOn: show)
+                Toggle("Also show widgets on the desktop", isOn: show)
                 Picker("Corner", selection: position) {
                     ForEach(WidgetPosition.allCases, id: \.self) { Text(Self.name($0)).tag($0) }
                 }
@@ -41,7 +41,7 @@ struct DevSettings: View {
             } header: {
                 Text("Desktop widgets")
             } footer: {
-                Text("Git, GitHub, Actions, dev servers, contributions, and your Claude and Codex limits, drawn on your desktop beneath your windows. Click a widget to open what it shows.")
+                Text("The widgets always live in the drop-down (Control-`, then Widgets). Turn this on to also keep them on your desktop, beneath your windows.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

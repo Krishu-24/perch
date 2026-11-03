@@ -523,9 +523,12 @@ struct ContentView: View {
                 haptics.toggle()
             }
             
+            // While Perch's drop-down (terminal and widgets) is in front, stay closed:
+            // the notch would open right over it.
             guard vm.notchState == .closed,
                   !coordinator.sneakPeek.show,
-                  Defaults[.openNotchOnHover] else { return }
+                  Defaults[.openNotchOnHover],
+                  claude.frontmostAppID != DevStore.helperBundleID else { return }
             
             hoverTask = Task {
                 try? await Task.sleep(for: .seconds(Defaults[.minimumHoverDuration]))

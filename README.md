@@ -7,7 +7,7 @@
 Your Claude Code and Codex limits, live Claude sessions, a terminal that drops out of the notch,
 and desktop widgets for your whole dev setup: Git, pull requests, Actions and dev servers.
 
-![Version](https://img.shields.io/badge/version-1.3.0-d97757)
+![Version](https://img.shields.io/badge/version-1.4.0-d97757)
 ![macOS](https://img.shields.io/badge/macOS-14%2B-black)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
@@ -119,7 +119,7 @@ None of the pieces call each other. Each writes or reads plain files in one fold
 
 ### Step 1 · Install the app
 
-1. Download **`Perch-1.3.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
+1. Download **`Perch-1.4.0.zip`** from the [latest release](https://github.com/Krishu-24/perch/releases/latest).
 2. Unzip it and drag **Perch.app** into **Applications**.
 3. Open it. macOS will say it *can't check Perch for malicious software*, because the app isn't
    signed with a paid Apple Developer ID. To open it anyway:
@@ -229,9 +229,20 @@ The closed notch shows **whatever you aren't looking at**: Claude or what's play
 > When a video plays full screen, macOS hides the notch area entirely, so nothing shows there
 > until you leave full screen.
 
-### The drop-down terminal
+### The drop-down
 
-- **Control-`** anywhere shows it; **Control-`** again, or clicking anywhere else, hides it.
+One panel drops out of the notch with two tabs, picked in the strip beside the notch:
+
+| Tab | What's there |
+|---|---|
+| **Terminal** | Your shell. |
+| **Widgets** | All the widgets below, full size: Git, GitHub, Actions, dev servers, contributions, and Claude and Codex limits. |
+
+- **Control-`** anywhere shows it on the tab you used last; **Control-`** again, or clicking anywhere else, hides it.
+- Switching tabs keeps both as they were: a command keeps running while you look at the widgets.
+- Click a project in the **Git** widget and the Terminal tab opens right in that folder.
+- While the drop-down is open, the notch stays closed underneath it, so nothing covers your terminal.
+- From the notch: the **Terminal** tab icon opens the Terminal tab; clicking the **GitHub** card on the Dev tab opens Widgets.
 - It's your normal login shell (zsh or bash) with your usual setup, starting in your home folder.
 - Hiding doesn't stop anything: a running command keeps going, and you come back to the same place.
 - Typing `exit` closes it; the next Control-` starts a fresh shell.
@@ -263,8 +274,9 @@ Local cards refresh every 6 seconds; GitHub every 3 minutes.
 
 <img src="docs/images/desktop-widgets.png" alt="The desktop widgets" width="640">
 
-Perch Helper draws these on your desktop, just above the desktop icons and beneath every window, on
-every Space. Each widget leads with one big number and lists the three things behind it.
+The widgets live in the drop-down's **Widgets** tab. If you'd also like them on your desktop, beneath
+your windows, turn that on in **Settings → Widgets**. Each widget leads with one big number and lists
+the three things behind it.
 
 | Widget | The big number | The list | Click a row to |
 |---|---|---|---|
@@ -275,7 +287,7 @@ every Space. Each widget leads with one big number and lists the three things be
 | **Contributions** | Your contributions in the last year | The last 24 weeks, plus your streak | — |
 | **Claude / Codex** | Five-hour usage | The week's usage, and what Claude is doing or your Codex plan | — |
 
-Turn them off or move them to another corner in **Settings → Widgets**.
+Put them on your desktop too, and pick the corner, in **Settings → Widgets**.
 
 ### Settings → Claude
 
@@ -290,7 +302,7 @@ Turn them off or move them to another corner in **Settings → Widgets**.
 
 | Setting | Default | What it does |
 |---|---|---|
-| Show widgets on the desktop | On | The desktop widgets described above. |
+| Also show widgets on the desktop | Off | Keeps the widgets on your desktop too, beneath your windows. |
 | Corner | Top right | Which corner of the screen they sit in, clear of the menu bar and Dock. |
 | Perch Helper / GitHub | — | Whether the helper is running and GitHub is connected. |
 | Refresh Now | — | Collects everything again straight away, GitHub included. |

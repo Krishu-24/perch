@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.0 · 3 November 2026
+
+### Changed
+
+- **One drop-down with two tabs, Terminal and Widgets.** Control-` opens it on the tab you used last.
+  The widgets live there at full size; clicking a project in the Git widget switches to the Terminal tab
+  in that folder. Both tabs keep their state while you switch.
+- **Desktop widgets are now optional** and off by default (Settings → Widgets).
+- From the notch, the GitHub card on the Dev tab opens the Widgets tab.
+
+### Fixed
+
+- The notch no longer opens over the drop-down: it stays closed while the drop-down is in front, and the
+  drop-down now sits above the notch panel.
+
 ## 1.3.0 · 3 November 2026
 
 ### Added

@@ -245,7 +245,8 @@ public struct WidgetSettings: Codable, Equatable {
     public var showDesktopWidgets: Bool
     public var position: WidgetPosition
 
-    public init(showDesktopWidgets: Bool = true, position: WidgetPosition = .topRight) {
+    /// Off by default: the widgets live in the drop-down, and the desktop is optional.
+    public init(showDesktopWidgets: Bool = false, position: WidgetPosition = .topRight) {
         self.showDesktopWidgets = showDesktopWidgets
         self.position = position
     }

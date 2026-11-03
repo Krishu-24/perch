@@ -63,6 +63,11 @@ final class DevStore: ObservableObject {
         openHelper("perch-helper://terminal")
     }
 
+    /// The drop-down's Widgets tab: Git, GitHub, Actions, dev servers and limits, full size.
+    func toggleWidgets() {
+        openHelper("perch-helper://widgets")
+    }
+
     /// Opens the terminal in one of the listed projects.
     func openTerminal(in project: GitProject) {
         var components = URLComponents(string: "perch-helper://terminal")!

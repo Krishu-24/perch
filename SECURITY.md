@@ -59,7 +59,7 @@ Source: [`helper/`](helper/).
 | **Files it reads** | The mod's `sessions/*.json` and `limits.json`, Perch's `settings.json`, the Git repositories you work in, and the last 512 KB of the newest three Codex session logs (`~/.codex/sessions/` and `~/.codex/archived_sessions/`, `rollout-*.jsonl` only) for Codex's limits. It never opens `~/.codex/auth.json`. |
 | **Windows** | The drop-down terminal, and the desktop widgets: a borderless panel at desktop-icon level that never takes focus, on every Space. Clicking a widget opens a link in your browser or the terminal in a listed project. |
 | **Keyboard** | One global hot key, Control-`, through Carbon's `RegisterEventHotKey`. It needs no Accessibility permission and receives only that combination. |
-| **Links it accepts** | `perch-helper://terminal` (toggle), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
+| **Links it accepts** | `perch-helper://terminal` and `perch-helper://widgets` (show or hide that tab of the drop-down), `perch-helper://refresh`, and `perch-helper://terminal?cd=<folder>`. The last is refused unless the folder is exactly one of the projects listed in `dev.json`, and the folder is quoted for the shell, so another app or a web page can neither point the terminal elsewhere nor inject a command. |
 
 ## Data at rest
 
